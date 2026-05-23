@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Walkie-Talkie</title>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600&family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -18,7 +18,7 @@ body {
 }
 
 :root {
-  --bg: #f5f4f0;
+  --bg: #ffffff;
   --device-bg: linear-gradient(170deg, #3c3836 0%, #282828 40%, #1d1d1d 100%);
   --device-shadow: 0 40px 80px rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
   --antenna-bg: linear-gradient(to bottom, #6b6866, #3c3836);
@@ -64,7 +64,7 @@ body {
 }
 
 [data-theme="light"] {
-  --bg: #e0deda;
+  --bg: #ffffff;
   --device-bg: linear-gradient(170deg, #f5f5f3 0%, #eae9e6 40%, #e0dfdc 100%);
   --device-shadow: 0 40px 80px rgba(0,0,0,0.12), 0 8px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
   --antenna-bg: linear-gradient(to bottom, #c8c6c3, #b0aeab);
@@ -113,6 +113,7 @@ body {
   width: 360px;
   height: 590px;
   padding-bottom: 10px;
+  flex-shrink: 0;
   background: var(--device-bg);
   border-radius: 32px 32px 28px 28px;
   box-shadow: var(--device-shadow);
@@ -165,6 +166,8 @@ body {
   gap: 14px;
   margin-top: 14px;
   align-items: center;
+  width: 100px;
+  flex-shrink: 0;
 }
 .led {
   width: 7px;
@@ -172,7 +175,8 @@ body {
   border-radius: 50%;
   background: var(--led-bg);
   border: 1px solid var(--led-border);
-  transition: all 0.4s;
+  transition: background 0.4s, border-color 0.4s, box-shadow 0.4s;
+  flex-shrink: 0;
 }
 .led.on-blue {
   background: #8DCDF1;
@@ -196,7 +200,9 @@ body {
   color: var(--label-color);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  transition: color 0.4s;
+  width: 36px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .screen {
@@ -460,13 +466,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  touch-action: none;
 }
 [data-theme="light"] #ptt-btn {
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   border: 2px solid #c8c6c3;
 }
 [data-theme="light"] #ptt-btn.active {
-  border-color: #999;
+  border-color: #888;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   animation: none;
 }
@@ -478,6 +486,7 @@ body {
 }
 #ptt-btn.active {
   border-color: var(--ptt-active-border);
+  color: var(--ptt-active-color);
   box-shadow:
     0 0 20px var(--ptt-glow),
     0 6px 16px rgba(0,0,0,0.4);
@@ -488,53 +497,538 @@ body {
   50% { box-shadow: 0 0 0 10px transparent, 0 6px 16px rgba(0,0,0,0.4); }
 }
 
+.status-text.ready { color: var(--status-active); }
 
 .side-btn {
   position: absolute;
-  width: 3px;
   background: var(--side-btn-bg);
   border-radius: 0 2px 2px 0;
   right: -4px;
-  transition: background 0.4s;
+  transition: background 0.4s, transform 0.15s, box-shadow 0.2s;
 }
-.side-btn.top,
+.side-btn.channel,
+.side-btn.theme,
 .side-btn.bot {
   height: 28px;
   width: 6px;
   right: -6px;
   border-radius: 0 3px 3px 0;
   cursor: pointer;
-  transition: background 0.4s, transform 0.15s;
 }
-.side-btn.top { top: 120px; }
-.side-btn.bot { top: 156px; }
-.side-btn.top:hover,
-.side-btn.bot:hover { transform: scaleX(1.3); }
-.side-btn.top:active,
-.side-btn.bot:active { transform: scaleX(0.8); }
+.side-btn.channel { top: 96px; }
+.side-btn.theme { top: 132px; }
+.side-btn.bot { top: 168px; }
+.side-btn:hover { transform: scaleX(1.3); }
+.side-btn:active { transform: scaleX(0.8); }
 
 .main-layout {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 56px;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 28px 0 72px;
+  box-sizing: border-box;
+}
+
+#agent-home {
+  flex: 1;
+  min-width: 580px;
+  margin-left: auto;
+  height: 590px;
+  min-height: 590px;
   position: relative;
+  overflow: hidden;
+  font-family: Ubuntu, 'DejaVu Sans', 'Liberation Sans', sans-serif;
+  background: #faf8f5;
+}
+
+.ubuntu-panel {
+  position: relative;
+  z-index: 2;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  background: linear-gradient(180deg, #e8e7e4 0%, #d8d7d4 55%, #cccbc8 100%);
+  border-bottom: 1px solid #b8b7b4;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  color: #4a4846;
+  font-size: 11px;
+  user-select: none;
+}
+.ubuntu-menu {
+  padding: 2px 8px;
+  border-radius: 2px;
+  cursor: default;
+}
+.ubuntu-menu:hover { background: rgba(0, 0, 0, 0.06); }
+.ubuntu-panel-spacer { flex: 1; }
+.ubuntu-clock {
+  padding: 0 8px;
+  font-size: 10px;
+  color: #7a7876;
+}
+
+.ubuntu-desktop-icons {
+  position: absolute;
+  top: 48px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 48px;
+  user-select: none;
+  cursor: default;
+}
+.desktop-icon-graphic {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f0eeea 0%, #d8d6d2 55%, #cccac6 100%);
+  border: 1px solid #b8b6b2;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+}
+.desktop-icon:hover .desktop-icon-graphic {
+  background: linear-gradient(180deg, #f8f6f2 0%, #e4e2de 55%, #d4d2ce 100%);
+}
+.desktop-icon-graphic svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+.desktop-icon-label {
+  font-size: 9px;
+  color: #6a6866;
+  text-align: center;
+  line-height: 1.2;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-#visual-area {
+.agent-window {
+  display: none;
   position: absolute;
-  left: calc(50% + 220px);
+  z-index: 4;
+  top: 32px;
+  left: 20px;
+  right: 20px;
+  bottom: 16px;
+  flex-direction: column;
+  border: 1px solid #b8b7b4;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: 2px 3px 12px rgba(0, 0, 0, 0.1);
+  background: #f5f4f1;
+}
+.agent-window.open { display: flex; }
+
+#agent-home.has-music-dock .agent-window.open {
+  bottom: 92px;
+}
+
+.music-dock {
+  display: none;
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(540px, calc(100% - 48px));
+  flex-direction: column;
+  border: 1px solid #b8b7b4;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 2px 3px 12px rgba(0, 0, 0, 0.12);
+  background: #f5f4f1;
+}
+.music-dock.open { display: flex; }
+.music-dock .window-chrome {
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, #d4d8c8 0%, #bcc0ae 45%, #aeb2a2 100%);
+  border-bottom-color: #989692;
+  color: #2a2826;
+}
+.music-dock .uw-btn {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: linear-gradient(180deg, #f0efec 0%, #dcdad6 100%);
+  color: #333;
+}
+.music-dock.compact-yt {
+  width: min(420px, calc(100% - 48px));
+}
+.music-dock-body {
+  overflow: hidden;
+}
+
+.agent-window.compact {
   top: 50%;
-  transform: translateY(-50%);
-  width: 540px;
-  height: 70vh;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(540px, calc(100% - 48px));
+  height: auto;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.agent-window.compact.compact-yt {
+  width: min(420px, calc(100% - 48px));
+}
+.agent-window.compact .window-chrome {
+  border-radius: 14px 14px 0 0;
+}
+
+.window-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 4px 0 6px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #c8c4bc 0%, #aba69d 100%);
+  border-bottom: 1px solid #7a746c;
+  color: #2a2520;
+}
+.agent-window.open .window-chrome {
+  background: linear-gradient(180deg, #d4d8c8 0%, #bcc0ae 45%, #aeb2a2 100%);
+  border-bottom-color: #989692;
+  color: #2a2826;
+  text-shadow: none;
+}
+.ubuntu-win-icon {
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+.window-title {
+  flex: 1;
+  text-align: left;
+  font-family: Ubuntu, 'DejaVu Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ubuntu-win-controls {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.uw-btn {
+  width: 18px;
+  height: 16px;
+  border: 1px solid #6a645c;
+  background: linear-gradient(180deg, #eceae6 0%, #c8c4bc 100%);
+  color: #333;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  cursor: default;
+  font-family: Ubuntu, sans-serif;
+}
+.uw-btn:hover { background: linear-gradient(180deg, #fff 0%, #dcd8d0 100%); }
+.uw-btn.close { font-size: 12px; font-weight: 700; }
+.agent-window.open .uw-btn {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: linear-gradient(180deg, #f0efec 0%, #dcdad6 100%);
+  color: #333;
+}
+
+.window-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #f5f4f1;
+  padding: 0;
+}
+
+.channel-pane {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
   opacity: 0;
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  visibility: hidden;
   pointer-events: none;
 }
-#visual-area.visible {
+.channel-pane.active {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+}
+.agent-window.compact .channel-pane.active {
+  position: relative;
+  inset: auto;
+  height: auto;
+  overflow: visible;
+}
+.agent-window.compact .window-content {
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
+}
+
+#chart-root svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 360px;
+  height: auto;
+}
+#chart-root .container,
+#chart-root .card,
+#chart-root [class*="card"],
+#chart-root [class*="panel"],
+#chart-root [class*="wrapper"] {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.ubuntu-player {
+  padding: 16px 18px;
+  background: #f5f4f1;
+  font-family: Ubuntu, 'DejaVu Sans', sans-serif;
+  color: #2a2520;
+  min-height: 100%;
+}
+.ubuntu-player.compact {
+  padding: 8px 12px 10px;
+  min-height: 0;
+}
+.ubuntu-player.compact .up-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ubuntu-player.compact .up-art {
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+}
+.ubuntu-player.compact .up-meta {
+  flex: 0 1 120px;
+  min-width: 0;
+}
+.ubuntu-player.compact .up-title {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0;
+}
+.ubuntu-player.compact .up-artist {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ubuntu-player.compact .up-scrub-wrap {
+  flex: 1;
+  min-width: 60px;
+}
+.ubuntu-player.compact .up-scrub {
+  height: 8px;
+}
+.ubuntu-player.compact .up-time {
+  margin-top: 0;
+  font-size: 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 52px;
+  text-align: right;
+}
+.up-vol-signal {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+}
+.up-vol-signal svg {
+  display: block;
+}
+.up-vol-signal .vol-arc {
+  stroke: #cccac6;
+}
+.up-vol-signal[data-level="1"] .arc-1 { stroke: #8a8884; }
+.up-vol-signal[data-level="2"] .arc-1,
+.up-vol-signal[data-level="2"] .arc-2 { stroke: #8a8884; }
+.up-vol-signal[data-level="3"] .vol-arc { stroke: #8a8884; }
+.ubuntu-player.compact .up-play {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+}
+.ubuntu-player.compact .up-header,
+.ubuntu-player.compact .up-vibe,
+.ubuntu-player.compact .up-body { display: none; }
+.ubuntu-player.compact .up-yt-wrap {
+  margin-top: 0;
+  height: 72px;
+}
+.ubuntu-player.compact .up-yt-wrap .yt-embed {
+  aspect-ratio: auto;
+  height: 72px;
+}
+
+.up-header {
+  font-size: 10px;
+  color: #6a5c50;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.up-body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.up-art {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #d4cfc7, #b8b2a8);
+  border: 1px solid #9a948c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #6a7a50;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.up-meta { flex: 1; min-width: 0; }
+.up-vibe {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #6a7a50;
+  margin-bottom: 2px;
+}
+.up-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2a2520;
+  margin-bottom: 2px;
+}
+.up-artist {
+  font-size: 11px;
+  color: #6a5c50;
+}
+.up-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.up-play {
+  width: 28px;
+  height: 24px;
+  border: 1px solid #6a645c;
+  background: linear-gradient(180deg, #f8f6f2 0%, #d8d4cc 100%);
+  color: #333;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.up-play:hover { background: linear-gradient(180deg, #fff 0%, #e8e4dc 100%); }
+.up-play:active { background: #c8c4bc; }
+.up-scrub-wrap { flex: 1; min-width: 0; }
+.up-scrub {
+  height: 12px;
+  background: #d8d4cc;
+  border: 1px solid #9a948c;
+  cursor: pointer;
+  position: relative;
+}
+.up-progress {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(180deg, #b4c898 0%, #8aa860 100%);
+  border-right: 1px solid #6a8a48;
+  transition: width 0.1s linear;
+}
+.up-time {
+  font-size: 10px;
+  color: #6a5c50;
+  margin-top: 4px;
+  display: block;
+}
+.up-audio { display: none; }
+.up-yt-wrap {
+  margin-top: 12px;
+  border: 1px solid #9a948c;
+  background: #000;
+}
+.up-yt-wrap .yt-embed {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  display: block;
+}
+
+#chart-root {
+  background: #ece9e4;
+  padding: 8px;
+}
+
+#meme-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  padding: 8px;
+  background: #2a2a2a;
+}
+#meme-root svg {
+  display: block;
+  width: 100%;
+  max-width: 440px;
+  min-height: 280px;
+  height: auto;
+}
+
+.text-panel {
+  padding: 0;
+  height: 100%;
+  min-height: 360px;
+}
+.text-panel textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  border: none;
+  padding: 16px 18px;
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #222;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
 }
 
 </style>
@@ -545,8 +1039,9 @@ body {
 
 <div class="device">
   <div class="antenna"></div>
-  <div class="side-btn top"></div>
-  <div class="side-btn bot"></div>
+  <div class="side-btn channel" id="channel-btn" title="Change channel"></div>
+  <div class="side-btn theme" id="theme-btn" title="Theme"></div>
+  <div class="side-btn bot" id="mute-btn" title="Mute"></div>
 
   <div class="speaker-grille">
     <div class="grille-line"></div><div class="grille-line"></div>
@@ -558,7 +1053,7 @@ body {
     <div class="led" id="led-1"></div>
     <div class="led" id="led-2"></div>
     <div class="led" id="led-3"></div>
-    <span class="channel-label">CH-01</span>
+    <span class="channel-label" id="channel-label">CH-01</span>
   </div>
 
   <div class="screen">
@@ -575,12 +1070,84 @@ body {
 
   <div class="controls">
     <div class="live-waveform" id="live-waveform"></div>
-    <div class="status-text" id="status">Press to talk</div>
-    <button id="ptt-btn">PTT</button>
+    <div class="status-text" id="status">Off</div>
+    <button id="ptt-btn" type="button" title="Power on / off">PTT</button>
   </div>
 </div>
 
-<div id="visual-area"></div>
+<div id="agent-home" class="agent-home">
+  <div class="ubuntu-panel">
+    <span class="ubuntu-menu">Applications</span>
+    <span class="ubuntu-menu">Places</span>
+    <span class="ubuntu-menu">System</span>
+    <span class="ubuntu-panel-spacer"></span>
+    <span class="ubuntu-clock" id="ubuntu-clock"></span>
+  </div>
+  <div class="ubuntu-desktop-icons" aria-hidden="true">
+    <div class="desktop-icon" title="Home">
+      <div class="desktop-icon-graphic">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4.5 10.2 12 4.5l7.5 5.7V19a1.2 1.2 0 0 1-1.2 1.2H14v-5.5h-4V20.2H5.7A1.2 1.2 0 0 1 4.5 19v-8.8Z" fill="#b0aeaa" stroke="#8a8884" stroke-width="1.1" stroke-linejoin="round"/>
+          <path d="M9.5 20.2V12.8h5v7.4" stroke="#8a8884" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="desktop-icon-label">Home</span>
+    </div>
+    <div class="desktop-icon" title="Terminal">
+      <div class="desktop-icon-graphic">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="4" y="5" width="16" height="14" rx="1.8" fill="#c4c2be" stroke="#8a8884" stroke-width="1.1"/>
+          <rect x="5.5" y="7.2" width="13" height="10.6" rx="0.8" fill="#7a7876"/>
+          <path d="M7.2 11.2 9.4 12.8 7.2 14.4" stroke="#f0eeea" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="10.8" y1="14.4" x2="13.8" y2="14.4" stroke="#f0eeea" stroke-width="1.15" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="desktop-icon-label">Terminal</span>
+    </div>
+    <div class="desktop-icon" title="Chrome">
+      <div class="desktop-icon-graphic">
+        <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <circle cx="24" cy="24" r="12" fill="#f0eeea"/>
+          <path d="M24,12H44.7812a23.9939,23.9939,0,0,0-41.5639.0029L13.6079,30l.0093-.0024A11.9852,11.9852,0,0,1,24,12Z" fill="#c4c2be"/>
+          <path d="M34.3913,30.0029,24.0007,48A23.994,23.994,0,0,0,44.78,12.0031H23.9989l-.0025.0093A11.985,11.985,0,0,1,34.3913,30.0029Z" fill="#b0aeaa"/>
+          <path d="M13.6086,30.0031,3.218,12.006A23.994,23.994,0,0,0,24.0025,48L34.3931,30.0029l-.0067-.0068a11.9852,11.9852,0,0,1-20.7778.007Z" fill="#9a9894"/>
+          <circle cx="24" cy="24" r="9.5" fill="#d8d6d2"/>
+          <circle cx="24" cy="24" r="3.8" fill="#f5f4f1" stroke="#a8a6a2" stroke-width="0.9"/>
+        </svg>
+      </div>
+      <span class="desktop-icon-label">Chrome</span>
+    </div>
+  </div>
+  <div id="music-dock" class="music-dock">
+    <div class="window-chrome">
+      <span class="ubuntu-win-icon">♫</span>
+      <div class="window-title">Rhythmbox</div>
+      <div class="ubuntu-win-controls">
+        <button type="button" class="uw-btn minimize" tabindex="-1">_</button>
+        <button type="button" class="uw-btn maximize" tabindex="-1">□</button>
+        <button type="button" class="uw-btn close" id="music-dock-close" title="Stop music">×</button>
+      </div>
+    </div>
+    <div id="music-dock-body" class="music-dock-body"></div>
+  </div>
+  <div id="agent-window" class="agent-window">
+    <div class="window-chrome">
+      <span class="ubuntu-win-icon" id="ubuntu-win-icon">▣</span>
+      <div class="window-title" id="window-title"></div>
+      <div class="ubuntu-win-controls">
+        <button type="button" class="uw-btn minimize" tabindex="-1">_</button>
+        <button type="button" class="uw-btn maximize" tabindex="-1">□</button>
+        <button type="button" class="uw-btn close" id="window-close" title="Close">×</button>
+      </div>
+    </div>
+    <div class="window-content" id="window-content">
+      <div class="channel-pane active" id="channel-pane-charts" data-mode="charts"></div>
+      <div class="channel-pane" id="channel-pane-audio" data-mode="audio"></div>
+      <div class="channel-pane" id="channel-pane-video" data-mode="video"></div>
+      <div class="channel-pane" id="channel-pane-memes" data-mode="memes"></div>
+    </div>
+  </div>
+</div>
 
 </div>
 
@@ -601,7 +1168,10 @@ const statusEl = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
 const toolsEl = document.getElementById('tools');
 const pttBtn = document.getElementById('ptt-btn');
-const muteBtn = document.querySelector('.side-btn.bot');
+const channelBtn = document.getElementById('channel-btn');
+const themeBtn = document.getElementById('theme-btn');
+const muteBtn = document.getElementById('mute-btn');
+const channelLabelEl = document.getElementById('channel-label');
 const muteIcon = document.getElementById('mute-icon');
 const led1 = document.getElementById('led-1');
 const led2 = document.getElementById('led-2');
@@ -625,17 +1195,230 @@ let outGain = null;
 let lwAnim = null;
 let currentState = '';
 
+const MUSIC_GAINS = [0.06, 0.12, 0.22];
+const VOICE_GAINS = [0.50, 0.62, 0.78];
+const VOLUME_SCALE = '3';
+if (localStorage.getItem('wt-volume-scale') !== VOLUME_SCALE) {
+  localStorage.setItem('wt-volume-scale', VOLUME_SCALE);
+  localStorage.setItem('wt-volume-level', '1');
+}
+let volumeLevel = parseInt(localStorage.getItem('wt-volume-level') || '1', 10);
+if (![1, 2, 3].includes(volumeLevel)) {
+  const saved = parseFloat(localStorage.getItem('wt-volume') || '0.12');
+  volumeLevel = saved <= 0.08 ? 1 : saved <= 0.16 ? 2 : 3;
+}
+
+function musicVolumeForLevel(level = volumeLevel) {
+  return MUSIC_GAINS[Math.max(1, Math.min(3, level)) - 1];
+}
+
+function voiceVolumeForLevel(level = volumeLevel) {
+  return VOICE_GAINS[Math.max(1, Math.min(3, level)) - 1];
+}
+
+function applyPlaybackVolume() {
+  volumeLevel = Math.max(1, Math.min(3, volumeLevel));
+  const musicVol = musicVolumeForLevel();
+  const voiceVol = voiceVolumeForLevel();
+  if (outGain && audioCtx) {
+    outGain.gain.setTargetAtTime(voiceVol, audioCtx.currentTime, 0.03);
+  } else if (outGain) {
+    outGain.gain.value = voiceVol;
+  }
+  windowContent?.querySelectorAll('audio, video').forEach(el => {
+    el.volume = musicVol;
+  });
+  musicDockBody?.querySelectorAll('audio, video').forEach(el => {
+    el.volume = musicVol;
+  });
+  localStorage.setItem('wt-volume-level', String(volumeLevel));
+  localStorage.setItem('wt-volume', String(musicVol));
+  updateVolumeUI();
+}
+
+function updateVolumeUI() {
+  document.querySelectorAll('.up-vol-signal').forEach(el => {
+    el.dataset.level = String(volumeLevel);
+    el.setAttribute('aria-label', `Volume ${volumeLevel}`);
+  });
+}
+
+function setPlaybackVolume(change, level, volumeLevelFromServer) {
+  if (volumeLevelFromServer != null && [1, 2, 3].includes(volumeLevelFromServer)) {
+    volumeLevel = volumeLevelFromServer;
+  } else if (change === 'up') {
+    volumeLevel = Math.min(3, volumeLevel + 1);
+  } else if (change === 'down') {
+    volumeLevel = Math.max(1, volumeLevel - 1);
+  } else if (change === 'set' && level != null) {
+    volumeLevel = level <= 40 ? 1 : level <= 70 ? 2 : 3;
+  }
+  applyPlaybackVolume();
+  return volumeLevel;
+}
+
 let toolsUsed = false;
+
+const CHANNELS = [
+  { label: 'CH-01', mode: 'charts', paneTitle: 'Chart' },
+  { label: 'CH-02', mode: 'audio', paneTitle: 'Rhythmbox' },
+  { label: 'CH-03', mode: 'video', paneTitle: 'Video' },
+  { label: 'CH-04', mode: 'memes', paneTitle: 'Meme' },
+];
+let channelIndex = 0;
+const channelState = {
+  charts: { title: 'Chart', hasContent: false },
+  audio: { title: 'Music', hasContent: false },
+  video: { title: 'Video', hasContent: false },
+  memes: { title: 'Meme', hasContent: false },
+};
+
+const agentWindow = document.getElementById('agent-window');
+const agentHome = document.getElementById('agent-home');
+const musicDock = document.getElementById('music-dock');
+const musicDockBody = document.getElementById('music-dock-body');
+const musicDockClose = document.getElementById('music-dock-close');
+const windowTitle = document.getElementById('window-title');
+const windowContent = document.getElementById('window-content');
+const windowClose = document.getElementById('window-close');
+
+function paneEl(mode) {
+  return document.getElementById(`channel-pane-${mode}`);
+}
+
+function pauseVideoOnly() {
+  paneEl('video')?.querySelectorAll('video').forEach(el => el.pause());
+}
+
+function pauseMusicOnly() {
+  musicDockBody?.querySelectorAll('audio').forEach(el => el.pause());
+}
+
+function pauseAllAgentMedia() {
+  windowContent.querySelectorAll('audio, video').forEach(el => el.pause());
+  musicDockBody?.querySelectorAll('audio, video').forEach(el => el.pause());
+}
+
+const CHANNEL_WIN_TITLES = {
+  charts: 'Chart Viewer',
+  audio: 'Rhythmbox',
+  video: 'Movie Player',
+  memes: 'Meme Generator',
+};
+const CHANNEL_ICONS = { charts: '▣', audio: '♫', video: '▶', memes: '☺' };
+
+function updateAgentWindowChrome(mode, visible) {
+  const iconEl = document.getElementById('ubuntu-win-icon');
+  if (iconEl) iconEl.textContent = CHANNEL_ICONS[mode] || '▣';
+  agentWindow.classList.remove('compact', 'compact-yt');
+}
+
+function refreshDesktopWindows() {
+  const mode = currentChannel().mode;
+  windowContent.querySelectorAll('.channel-pane').forEach(pane => {
+    pane.classList.toggle('active', pane.dataset.mode === mode);
+  });
+
+  const musicActive = channelState.audio.hasContent;
+  musicDock.classList.toggle('open', musicActive);
+  agentHome.classList.toggle('has-music-dock', musicActive);
+
+  const isYt = musicActive && !!musicDockBody.querySelector('.up-yt-wrap');
+  musicDock.classList.toggle('compact-yt', isYt);
+
+  const showMain = mode !== 'audio' && channelState[mode]?.hasContent;
+  agentWindow.classList.toggle('open', showMain);
+  updateAgentWindowChrome(mode, showMain);
+  if (showMain) {
+    windowTitle.textContent = channelState[mode].title || CHANNEL_WIN_TITLES[mode] || 'Application';
+  }
+
+  if (musicActive) {
+    initMusicPlayer(musicDockBody.querySelector('.ubuntu-player'));
+  }
+}
+
+function showActiveChannelPane() {
+  refreshDesktopWindows();
+}
+
+function currentChannel() {
+  return CHANNELS[channelIndex];
+}
+
+function pauseAgentMedia() {
+  pauseAllAgentMedia();
+}
+
+function reinjectScripts(container) {
+  container.querySelectorAll('script').forEach(old => {
+    const s = document.createElement('script');
+    s.textContent = old.textContent;
+    old.parentNode.replaceChild(s, old);
+  });
+}
+
+function setChannelWindow(mode, title, html) {
+  channelState[mode] = { title, hasContent: true };
+  const pane = paneEl(mode);
+  pane.innerHTML = html;
+  reinjectScripts(pane);
+  refreshDesktopWindows();
+}
+
+function updateChannelUI() {
+  const ch = currentChannel();
+  channelLabelEl.textContent = ch.label;
+  channelBtn.title = `${ch.label} · tap to change`;
+}
+
+function sendChannelUpdate() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  const ch = currentChannel();
+  ws.send(JSON.stringify({ type: 'channel', channel: ch.label, mode: ch.mode }));
+}
+
+function cycleChannel() {
+  if (currentChannel().mode === 'video') pauseVideoOnly();
+  channelIndex = (channelIndex + 1) % CHANNELS.length;
+  updateChannelUI();
+  sendChannelUpdate();
+  showActiveChannelPane();
+}
+
+function switchToChannelMode(targetMode) {
+  const idx = CHANNELS.findIndex(c => c.mode === targetMode);
+  if (idx < 0 || channelIndex === idx) return;
+  if (currentChannel().mode === 'video') pauseVideoOnly();
+  channelIndex = idx;
+  updateChannelUI();
+  sendChannelUpdate();
+  showActiveChannelPane();
+}
+
+function switchToAudioChannel() {
+  switchToChannelMode('audio');
+}
+
+function switchToChartsChannel() {
+  switchToChannelMode('charts');
+}
+
+function switchToMemesChannel() {
+  switchToChannelMode('memes');
+}
+
+updateChannelUI();
 
 function setStatus(text, cls) {
   statusEl.textContent = text;
   statusEl.className = 'status-text ' + (cls || '');
   currentState = cls || '';
-  led1.className = 'led' + (cls === 'connected' ? ' on-green' : '');
+  led1.className = 'led' + (isConnected ? ' on-green' : '');
   led2.className = 'led' + (cls === 'speaking' ? ' on-blue' : '');
   led3.className = 'led' + ((cls === 'thinking' || toolsUsed) ? ' on-amber' : '');
 
-  const isActive = cls === 'connected' || cls === 'speaking';
+  const isActive = isConnected;
   liveWaveform.classList.toggle('active', isActive);
   liveWaveform.classList.toggle('speaking', cls === 'speaking');
   if (isActive) startLiveWaveform();
@@ -652,7 +1435,7 @@ function startLiveWaveform() {
 
     if (pendingListening && audioCtx && nextPlayTime <= audioCtx.currentTime + 0.1) {
       pendingListening = false;
-      setStatus('Listening', 'connected');
+      if (isConnected) setStatus('Listening', 'connected');
     }
 
     let activeAnalyser = null;
@@ -660,7 +1443,7 @@ function startLiveWaveform() {
     if (currentState === 'speaking' && outAnalyser && outAnalyserData) {
       activeAnalyser = outAnalyser;
       activeData = outAnalyserData;
-    } else if (currentState === 'connected' && !isMuted && micAnalyser && micAnalyserData) {
+    } else if (isConnected && !isMuted && micAnalyser && micAnalyserData) {
       activeAnalyser = micAnalyser;
       activeData = micAnalyserData;
     }
@@ -915,7 +1698,7 @@ async function startMic() {
   outAnalyser.smoothingTimeConstant = 0.4;
   outAnalyserData = new Uint8Array(outAnalyser.frequencyBinCount);
   outGain = audioCtx.createGain();
-  outGain.gain.value = 1;
+  outGain.gain.value = voiceVolumeForLevel();
   outGain.connect(outAnalyser);
   outAnalyser.connect(audioCtx.destination);
 
@@ -944,7 +1727,7 @@ function connect() {
     setStatus('Connecting...', 'connected');
     try {
       await startMic();
-      ws.send(JSON.stringify({ type: 'start' }));
+      ws.send(JSON.stringify({ type: 'start', channel: currentChannel().label, mode: currentChannel().mode }));
       isConnected = true;
       isMuted = false;
       pttBtn.classList.add('active');
@@ -974,18 +1757,34 @@ function connect() {
         addToolResult(msg.name, msg.result);
         break;
       case 'visual':
-        showVisual(msg.url);
+        switchToChartsChannel();
+        showVisual(msg.url, 'charts');
+        break;
+      case 'meme':
+        switchToMemesChannel();
+        showVisual(msg.url, 'memes');
+        break;
+      case 'music':
+        showMusic(msg);
+        break;
+      case 'text':
+        showText(msg, 'charts');
+        break;
+      case 'video':
+        showVideoWindow(msg, 'video');
+        break;
+      case 'volume':
+        setPlaybackVolume(msg.change, msg.level, msg.volumeLevel);
         break;
       case 'status':
-        if (msg.state === 'listening') {
+        if (msg.state === 'listening' || msg.state === 'ready') {
           if (audioCtx && nextPlayTime > audioCtx.currentTime + 0.1) {
             pendingListening = true;
-          } else {
+          } else if (isConnected) {
             setStatus('Listening', 'connected');
             pendingListening = false;
           }
-        }
-        else if (msg.state === 'speaking') setStatus('Speaking', 'speaking');
+        } else if (msg.state === 'speaking') setStatus('Speaking', 'speaking');
         else if (msg.state === 'thinking') setStatus('Thinking', 'thinking');
         break;
       case 'error':
@@ -1002,26 +1801,271 @@ function connect() {
   ws.onerror = () => setStatus('Error', '');
 }
 
-const visualArea = document.getElementById('visual-area');
+const MUSIC_TRACKS = {
+  'chill-lofi': {
+    id: 'chill-lofi', vibe: 'chill', title: 'Lofi Drift', artist: 'Mellow hip-hop grooves',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3',
+  },
+  'chill-night': {
+    id: 'chill-night', vibe: 'chill', title: 'Night Lofi', artist: 'Slow late-night beats',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3',
+  },
+  'chill-ambient': {
+    id: 'chill-ambient', vibe: 'chill', title: 'Soft Ambient', artist: 'Calm drifting pads',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
+  },
+  'focus-deep': {
+    id: 'focus-deep', vibe: 'focus', title: 'Deep Focus', artist: 'Minimal study grooves',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+  },
+  'focus-flow': {
+    id: 'focus-flow', vibe: 'focus', title: 'Flow State', artist: 'Steady concentration',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+  },
+  'hype-energy': {
+    id: 'hype-energy', vibe: 'hype', title: 'Hype', artist: 'Upbeat energy',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+  },
+  'hype-synth': {
+    id: 'hype-synth', vibe: 'hype', title: 'Synth Drive', artist: 'Hackathon fuel',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+  },
+  'ambient-space': {
+    id: 'ambient-space', vibe: 'ambient', title: 'Space Drift', artist: 'Atmospheric calm',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3',
+  },
+  'walk-stroll': {
+    id: 'walk-stroll', vibe: 'walk', title: 'Morning Walk', artist: 'Light piano stroll',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+  },
+  'jazz-cafe': {
+    id: 'jazz-cafe', vibe: 'jazz', title: 'Jazz Cafe', artist: 'Smooth jazz lofi',
+    type: 'mp3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+  },
+};
 
-function showVisual(url) {
+const TRACKS_BY_VIBE = {
+  chill: ['chill-lofi', 'chill-night', 'chill-ambient'],
+  focus: ['focus-deep', 'focus-flow'],
+  hype: ['hype-energy', 'hype-synth'],
+  ambient: ['ambient-space'],
+  walk: ['walk-stroll'],
+  jazz: ['jazz-cafe'],
+};
+
+const lastTrackPick = {};
+
+function resolveTrack(msg) {
+  const raw = (msg.track || msg.vibe || msg.query || 'hype').toLowerCase().trim();
+  if (raw.includes('night')) return MUSIC_TRACKS['chill-night'];
+  if (MUSIC_TRACKS[raw]) return MUSIC_TRACKS[raw];
+
+  const switchTrack = /\b(switch|different|another|else|change|try something)\b/.test(raw);
+
+  let vibe = 'hype';
+  if (raw.includes('jazz')) vibe = 'jazz';
+  else if (raw.includes('ambient')) vibe = 'ambient';
+  else if (raw.includes('walk') || raw.includes('stroll')) vibe = 'walk';
+  else if (raw.includes('focus') || raw.includes('work') || raw.includes('study')) vibe = 'focus';
+  else if (
+    raw.includes('hype') || raw.includes('upbeat') || raw.includes('energy') ||
+    raw.includes('hackathon') || raw.includes('synth') || raw.includes('cyber')
+  ) vibe = 'hype';
+  else if (raw.includes('chill') || raw.includes('lofi') || raw.includes('lo-fi') || raw.includes('relax') || raw.includes('night')) vibe = 'chill';
+
+  const pool = TRACKS_BY_VIBE[vibe] || TRACKS_BY_VIBE.hype;
+  if (switchTrack) {
+    lastTrackPick[vibe] = ((lastTrackPick[vibe] ?? 0) + 1) % pool.length;
+  } else if (lastTrackPick[vibe] == null) {
+    lastTrackPick[vibe] = 0;
+  }
+  return MUSIC_TRACKS[pool[lastTrackPick[vibe]]];
+}
+
+function closeMusicDock() {
+  pauseMusicOnly();
+  musicDockBody.innerHTML = '';
+  channelState.audio = { title: 'Rhythmbox', hasContent: false };
+  refreshDesktopWindows();
+}
+
+function closeWindow() {
+  const mode = currentChannel().mode;
+  if (mode === 'video') pauseVideoOnly();
+  channelState[mode] = { title: currentChannel().paneTitle, hasContent: false };
+  paneEl(mode).innerHTML = '';
+  refreshDesktopWindows();
+}
+
+windowClose.addEventListener('click', closeWindow);
+musicDockClose.addEventListener('click', closeMusicDock);
+
+function scopeVisualStyles(css, rootId) {
+  return css.replace(/(^|[\s,>+~])body(?=[\s,{.#:[])/gm, `$1#${rootId}`);
+}
+
+function showVisual(url, mode = currentChannel().mode) {
+  const rootId = mode === 'memes' ? 'meme-root' : 'chart-root';
+  if (mode === 'memes') switchToMemesChannel();
   fetch(url)
-    .then(r => r.text())
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
+    })
     .then(html => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const style = doc.querySelector('style');
-      const body = doc.body;
-      visualArea.innerHTML = '';
-      if (style) visualArea.appendChild(style.cloneNode(true));
-      visualArea.innerHTML += body.innerHTML;
-      visualArea.querySelectorAll('script').forEach(old => {
-        const s = document.createElement('script');
-        s.textContent = old.textContent;
-        old.parentNode.replaceChild(s, old);
-      });
-      visualArea.classList.add('visible');
-    });
+      const trimmed = html.trim();
+      let inner = '';
+      if (/^<(!DOCTYPE|html)/i.test(trimmed)) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(trimmed, 'text/html');
+        const styles = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+        if (styles) inner += `<style>${scopeVisualStyles(styles, rootId)}</style>`;
+        inner += doc.body?.innerHTML || '';
+      } else {
+        const styleMatch = trimmed.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+        if (styleMatch) {
+          inner += `<style>${scopeVisualStyles(styleMatch[1], rootId)}</style>`;
+          inner += trimmed.replace(/<style[^>]*>[\s\S]*?<\/style>/i, '');
+        } else {
+          inner = trimmed;
+        }
+      }
+      setChannelWindow(mode, CHANNEL_WIN_TITLES[mode] || CHANNEL_WIN_TITLES.charts, `<div id="${rootId}">${inner}</div>`);
+    })
+    .catch(err => console.error('[visual] Failed to load:', url, err));
+}
+
+function formatTime(sec) {
+  if (!sec || !isFinite(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function buildVolumeSignalHtml() {
+  return (
+    `<span class="up-vol-signal" data-level="${volumeLevel}" aria-label="Volume ${volumeLevel}">` +
+    `<svg viewBox="0 0 18 14" width="15" height="12" aria-hidden="true">` +
+    `<path d="M1.5 5.5h2.2L7 3.2v7.6L3.7 8.5H1.5V5.5z" fill="#8a8884"/>` +
+    `<path class="vol-arc arc-1" d="M8.5 4.8c1.8 1.5 1.8 3.9 0 5.4" fill="none" stroke-width="1.2" stroke-linecap="round"/>` +
+    `<path class="vol-arc arc-2" d="M10.2 3.5c2.8 2.3 2.8 6.7 0 9" fill="none" stroke-width="1.2" stroke-linecap="round"/>` +
+    `<path class="vol-arc arc-3" d="M11.8 2c3.8 3.1 3.8 9.1 0 12.1" fill="none" stroke-width="1.2" stroke-linecap="round"/>` +
+    `</svg></span>`
+  );
+}
+
+function buildUbuntuPlayerHtml(vibe, opts) {
+  const isYoutube = opts?.youtube;
+  if (isYoutube) {
+    return (
+      `<div class="ubuntu-player compact">` +
+      `<div class="up-row">` +
+      `<div class="up-art">♫</div>` +
+      `<div class="up-meta">` +
+      `<div class="up-title">${escapeHtml(vibe.title)}</div>` +
+      `<div class="up-artist">${escapeHtml(vibe.artist)}</div>` +
+      `</div>` +
+      buildVolumeSignalHtml() +
+      `</div>` +
+      `<div class="up-yt-wrap">` +
+      `<iframe class="yt-embed" src="https://www.youtube-nocookie.com/embed/${escapeHtml(opts.youtubeId)}?autoplay=1" ` +
+      `allow="autoplay; encrypted-media" allowfullscreen title="${escapeHtml(vibe.title)}"></iframe>` +
+      `</div></div>`
+    );
+  }
+  return (
+    `<div class="ubuntu-player compact">` +
+    `<div class="up-row">` +
+    `<button type="button" class="up-play" aria-label="Play">▶</button>` +
+    `<div class="up-art">♫</div>` +
+    `<div class="up-meta">` +
+    `<div class="up-title">${escapeHtml(vibe.title)}</div>` +
+    `<div class="up-artist">${escapeHtml(vibe.artist)}</div>` +
+    `</div>` +
+    `<div class="up-scrub-wrap"><div class="up-scrub"><div class="up-progress"></div></div></div>` +
+    `<span class="up-time">0:00 / 0:00</span>` +
+    buildVolumeSignalHtml() +
+    `</div>` +
+    `<audio class="up-audio" autoplay src="${escapeHtml(opts.mp3Url)}"></audio>` +
+    `</div>`
+  );
+}
+
+function initMusicPlayer(playerEl) {
+  if (!playerEl) return;
+  if (playerEl.dataset.initialized === '1') return;
+  const audio = playerEl.querySelector('.up-audio');
+
+  if (!audio) return;
+
+  playerEl.dataset.initialized = '1';
+  audio.volume = musicVolumeForLevel();
+
+  const playBtn = playerEl.querySelector('.up-play');
+  const progress = playerEl.querySelector('.up-progress');
+  const scrub = playerEl.querySelector('.up-scrub');
+  const timeEl = playerEl.querySelector('.up-time');
+
+  playBtn?.addEventListener('click', () => {
+    if (audio.paused) audio.play();
+    else audio.pause();
+  });
+
+  scrub?.addEventListener('click', (e) => {
+    if (!audio.duration) return;
+    const rect = scrub.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = pct * audio.duration;
+  });
+
+  audio.addEventListener('play', () => { if (playBtn) playBtn.textContent = '❚❚'; });
+  audio.addEventListener('pause', () => { if (playBtn) playBtn.textContent = '▶'; });
+  audio.addEventListener('timeupdate', () => {
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    if (progress) progress.style.width = `${pct}%`;
+    if (timeEl) timeEl.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+  });
+
+  if (playBtn) playBtn.textContent = audio.paused ? '▶' : '❚❚';
+  audio.play().catch(() => {});
+}
+
+function showMusic(msg) {
+  const track = msg.url
+    ? { id: 'music', title: msg.title || 'Music', artist: msg.artist || '', type: 'mp3', url: msg.url }
+    : resolveTrack(msg);
+
+  let html;
+  if (track.type === 'youtube' && track.youtubeId) {
+    html = buildUbuntuPlayerHtml(track, { youtube: true, youtubeId: track.youtubeId });
+  } else {
+    html = buildUbuntuPlayerHtml(track, { mp3Url: track.url });
+  }
+
+  musicDockBody.innerHTML = html;
+  channelState.audio = { title: track.title || CHANNEL_WIN_TITLES.audio, hasContent: true };
+  refreshDesktopWindows();
+}
+
+function showText(msg, mode = currentChannel().mode) {
+  const title = msg.title || 'Notes';
+  const html =
+    `<div class="text-panel"><textarea readonly>${escapeHtml(msg.content || '')}</textarea></div>`;
+  setChannelWindow(mode, title, html);
+}
+
+function showVideoWindow(msg, mode = currentChannel().mode) {
+  const title = msg.title || CHANNEL_WIN_TITLES.video;
+  const url = msg.url || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+  const html =
+    `<div style="padding:0;background:#000">` +
+    `<video controls autoplay playsinline style="width:100%;max-height:70vh;display:block" src="${escapeHtml(url)}"></video>` +
+    `</div>`;
+  setChannelWindow(mode, title, html);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function disconnect() {
@@ -1036,6 +2080,7 @@ function disconnect() {
     ws.close();
   }
   ws = null;
+  setStatus('Off', '');
 }
 
 function updateMicUI() {
@@ -1052,13 +2097,17 @@ muteBtn.addEventListener('click', () => {
   updateMicUI();
 });
 
-pttBtn.addEventListener('click', () => isConnected ? disconnect() : connect());
+pttBtn.addEventListener('click', () => {
+  if (isConnected) disconnect();
+  else connect();
+});
 
-const sideBtn = document.querySelector('.side-btn.top');
+channelBtn.addEventListener('click', () => cycleChannel());
+
 const savedTheme = localStorage.getItem('wt-theme');
 if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 
-sideBtn.addEventListener('click', () => {
+themeBtn.addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme');
   if (current === 'light') {
     document.documentElement.removeAttribute('data-theme');
@@ -1068,6 +2117,14 @@ sideBtn.addEventListener('click', () => {
     localStorage.setItem('wt-theme', 'light');
   }
 });
+
+function tickUbuntuClock() {
+  const el = document.getElementById('ubuntu-clock');
+  if (el) el.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+tickUbuntuClock();
+setInterval(tickUbuntuClock, 30000);
+
 </script>
 </body>
 </html>
