@@ -34,32 +34,32 @@ public/generated/         <- browser displays charts, memes, artifacts
 | Layer | Tech |
 |-------|------|
 | Voice UI | `public/index.html` (hold-to-talk button) |
-| Voice model (default) | OpenAI Realtime (`gpt-realtime-2`) — `VOICE_BACKEND=openai` |
-| Voice model (optional) | Gemini Live API — `VOICE_BACKEND=gemini-live` |
+| Voice model (default) | Gemini Live API — `VOICE_BACKEND=gemini-live` |
+| Voice model (optional) | OpenAI Realtime (`gpt-realtime-2`) — `VOICE_BACKEND=openai` |
 | Background brain | Gemini 3.5 Flash API (port 3336) |
 | Server | Fastify + WebSocket (port 3335) |
 
 ## Prerequisites
 
 - Node.js 18+
-- `GEMINI_API_KEY` in `.env` (background brain; also voice when using Gemini Live)
-- `OPENAI_API_KEY` in `.env` (only when `VOICE_BACKEND=openai`, the default)
+- `GEMINI_API_KEY` in `.env` (voice + background brain)
+- `OPENAI_API_KEY` in `.env` (only when `VOICE_BACKEND=openai`)
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env    # edit keys + optional VOICE_BACKEND
+cp .env.example .env    # edit GEMINI_API_KEY; optional VOICE_BACKEND
+npm run verify-gemini-live   # smoke test Gemini Live voice
 npm run verify-gemini   # smoke test background Gemini API
-npm run verify-gemini-live   # if using VOICE_BACKEND=gemini-live
 ```
 
 Optional `.env` settings:
 
 ```
-VOICE_BACKEND=openai       # openai (default) | gemini-live
+VOICE_BACKEND=gemini-live  # gemini-live (default) | openai
 GEMINI_LIVE_MODEL=gemini-2.5-flash-native-audio-preview-12-2025
-OPENAI_API_KEY=            # required for VOICE_BACKEND=openai
+OPENAI_API_KEY=            # only for VOICE_BACKEND=openai
 PORT=3335                  # voice server port (default)
 BRAIN_BACKEND=gemini       # default
 BROWSER_AUTH_TOKEN=        # leave empty for local dev
@@ -95,7 +95,7 @@ If the voice says "Background brain not running", start Terminal 2.
 | `npm run dev` | Voice server (tsx, port 3335) |
 | `./launch-bg-brain.sh` | Background brain (port 3336) |
 | `npm run verify-gemini` | Smoke test Gemini 3.5 Flash (background) |
-| `npm run verify-gemini-live` | Smoke test Gemini Live (voice option) |
+| `npm run verify-gemini-live` | Smoke test Gemini Live (default voice) |
 | `npm run build` | Compile TypeScript |
 | `npm start` | Run compiled server |
 
@@ -106,7 +106,7 @@ src/
   index.ts              entry point
   server.ts             HTTP + WebSocket server
   browser-stream.ts     real-time voice + tool routing
-  gemini-live-stream.ts Gemini Live voice backend (optional)
+  gemini-live-stream.ts Gemini Live voice backend (default)
   bg-brain.ts           Gemini 3.5 Flash task server
   config.ts             env config
 public/

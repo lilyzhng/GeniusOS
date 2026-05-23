@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: resolve(__dirname, "../.env") });
 
-const voiceBackend = (process.env.VOICE_BACKEND ?? "openai") as "openai" | "gemini-live";
+const voiceBackend = (process.env.VOICE_BACKEND ?? "gemini-live") as "openai" | "gemini-live";
 
 export const config = {
   voice: {
