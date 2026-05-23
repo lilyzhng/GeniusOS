@@ -1,8 +1,52 @@
 # Walkie-Talkie → Agent Home
 
-Voice interface for a managed agent in a persistent sandbox.
-
 Built during DeepMind I/O Hackathon, 2026-05-23.
+
+## What it is
+
+Walkie-Talkie is a **dual-model system**:
+
+1. **Front-end model** — real-time voice interaction (listen, speak, pivot mid-conversation)
+2. **Background model** — tool execution in a persistent sandbox (files, charts, generative UI)
+
+Press to talk. The front-end handles the conversation; the background does the work.
+
+## The gap it fills
+
+LLM products split into two camps today: **full-duplex** (live voice — GPT Realtime, Moshi) and **turn-based** (chat + tools — Claude Code, Gemini). One is great at talking; the other is great at doing. Nothing live sits in between.
+
+Walkie-Talkie stitches both: natural real-time interaction up front, powerful tool execution in the back. [More on the interaction-model gap →](https://lilyzhng.github.io/posts/interaction-model/)
+
+# Managed Agent
+
+**Phase 1 (today) — no managed agent.** The background brain calls `gemini-3.5-flash` directly via the Gemini API (`BRAIN_BACKEND=gemini`). Charts and memes are generated locally and written to `public/generated/`. This is a standard model API, not a managed agent sandbox.
+
+**Phase 2 (planned, not wired yet) — managed agent.** Same voice shell; only the background brain swaps to Antigravity (`BRAIN_BACKEND=antigravity`). The plan:
+
+```
+Browser (hold-to-talk)
+  │ WebSocket /voice/browser
+  ▼
+browser-stream.ts              ← OpenAI Realtime (front-end model)
+  │ tool: use_cli("organize screenshots")
+  │ POST http://localhost:3336/task
+  ▼
+bg-brain.ts                    ← BRAIN_BACKEND=antigravity (planned)
+  │
+  │  interactions.create({
+  │    agent: "antigravity-preview-05-2026",
+  │    environment,              ← persistent sandbox = Agent Home
+  │    previous_interaction_id   ← state across commands
+  │  })
+  ▼
+Remote sandbox (/workspace/...)  ← agent runs tools, moves files, writes artifacts
+  │
+  │  download tarball
+  ▼
+public/generated/              ← browser displays charts / Agent Home updates
+```
+
+The front-end model stays the same in both phases. Managed agents would only replace the background brain — for tool execution and persistent state in a remote sandbox.
 
 ## Stack (today)
 
