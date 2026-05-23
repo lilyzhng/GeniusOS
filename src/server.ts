@@ -58,6 +58,17 @@ export async function startServer(): Promise<void> {
     reply.type("text/html").send(html);
   });
 
+  app.get("/icons/:filename", async (request, reply) => {
+    const { filename } = request.params as { filename: string };
+    const filePath = resolve(__dirname, "../public/icons", filename);
+    if (!existsSync(filePath)) {
+      reply.code(404).send("Not found");
+      return;
+    }
+    reply.type(extname(filename) === ".svg" ? "image/svg+xml" : "application/octet-stream")
+      .send(readFileSync(filePath));
+  });
+
   app.get("/generated/:filename", async (request, reply) => {
     const { filename } = request.params as { filename: string };
     const filePath = resolve(__dirname, "../public/generated", filename);

@@ -63,8 +63,40 @@ VISUAL HIERARCHY (critical — users ask for a chart, not a dashboard):
 
 The server saves your HTML automatically — do not say you saved a file.`;
 
+const MEME_PROMPT = `${SYSTEM_PROMPT}
+
+You render internet-style memes as self-contained HTML inside a \`\`\`html code block.
+
+CRITICAL — VISUAL FIRST (text-only output is INVALID and will be rejected):
+- The meme MUST include a large inline SVG illustration as the hero (≥280px tall, ~440px wide).
+- Draw the scene with SVG: characters (stick figures, cat at keyboard, brain tiers, Drake silhouettes), props, speed lines, emoji-style faces, colored panels, arrows, checkmarks.
+- Caption text is secondary — at most 2 short lines (top/bottom or labels). Never output ONLY impact text with no drawing.
+- If the joke fits "typing cat" or "speed lines", DRAW the cat, keyboard, and motion lines in SVG — do not tell the user to add an image elsewhere.
+
+Technical rules:
+- Inline CSS and inline SVG only. NO external scripts, CDN, or remote images.
+- ~480px wide, centered. Meme templates often use dark/colored panel backgrounds (#1a1a2e, #4a4a4a) — that's fine.
+- Layout: prefer HORIZONTAL two-panel comic — left panel = setup, right panel = punchline. Side-by-side panels (~220px each) inside ~480px width. Use vertical stack ONLY if the joke needs top/bottom impact text.
+- Layout examples: horizontal Drake (reject ✓ left / accept ✗ right); before/after side-by-side; left = action scene, right = reaction with checkmark.
+- Bold meme typography when using text: uppercase, white with black stroke or high-contrast bars.
+- The meme IS the whole page — no explanation paragraphs.
+- Do not say you saved a file or that Lily needs another app to add images.`;
+
+function isVisualMemeHtml(html: string): boolean {
+  if (/<svg[\s>]/i.test(html)) return true;
+  const panelCount = (html.match(/<(div|section)[^>]*style=/gi) || []).length;
+  return panelCount >= 4;
+}
+
+type TaskKind = "chart" | "meme" | "text";
+
 function isVisualizationTask(task: string): boolean {
-  return /\b(chart|graph|plot|visual|visualiz|diagram|trend|compare|earnings|overlay|draw|show me)\b/i.test(task);
+  return /\b(chart|graph|plot|visual|visualiz|diagram|trend|compare|earnings|overlay|draw|show me)\b/i.test(task)
+    && !isMemeTask(task);
+}
+
+function isMemeTask(task: string): boolean {
+  return /\b(meme|memeify|memefy|funny|joke about|roast|drake|brain meme|reaction pic)\b/i.test(task);
 }
 
 let gemini: GoogleGenAI | null = null;
@@ -80,13 +112,47 @@ function getGemini(): GoogleGenAI {
 let seeded = false;
 let busy = false;
 
-let lastSavedVisual: string | null = null;
+interface QueueJob {
+  task: string;
+  kind: TaskKind;
+  resolve: (result: string) => void;
+  reject: (err: Error) => void;
+}
+const taskQueue: QueueJob[] = [];
+let queueProcessing = false;
 
-function getLastSavedVisual(): string | null {
-  return lastSavedVisual;
+async function processTaskQueue(): Promise<void> {
+  if (queueProcessing) return;
+  queueProcessing = true;
+  busy = true;
+  while (taskQueue.length > 0) {
+    const job = taskQueue.shift()!;
+    console.log(`[bg-brain] Queue (${taskQueue.length} waiting): ${job.kind}`);
+    try {
+      const result = await runTask(job.task, job.kind);
+      job.resolve(result);
+    } catch (err) {
+      job.reject(err as Error);
+    }
+  }
+  busy = false;
+  queueProcessing = false;
 }
 
-function saveHtmlFromResponse(text: string): string | null {
+function enqueueTask(task: string, kind: TaskKind): Promise<string> {
+  return new Promise((resolve, reject) => {
+    taskQueue.push({ task, kind, resolve, reject });
+    void processTaskQueue();
+  });
+}
+
+let lastSaved = { viz: null as string | null, meme: null as string | null };
+
+function getLastSaved(prefix: "viz" | "meme"): string | null {
+  return lastSaved[prefix];
+}
+
+function saveHtmlFromResponse(text: string, prefix: "viz" | "meme"): string | null {
   const fenceMatch = text.match(/```(?:html)?\s*\n([\s\S]*?)```/i);
   let html = fenceMatch?.[1]?.trim();
   if (!html && /^\s*<(!DOCTYPE|html)/i.test(text)) {
@@ -94,20 +160,30 @@ function saveHtmlFromResponse(text: string): string | null {
   }
   if (!html?.includes("<")) return null;
 
-  const filename = `viz-${Date.now()}.html`;
+  const filename = `${prefix}-${Date.now()}.html`;
   writeFileSync(resolve(GENERATED_DIR, filename), html);
   console.log(`[bg-brain] Wrote ${filename}`);
-  lastSavedVisual = filename;
+  lastSaved[prefix] = filename;
   return filename;
 }
 
-async function runTaskGemini(task: string): Promise<string> {
-  lastSavedVisual = null;
-  console.log(`[bg-brain] Task (${MODEL}): ${task.slice(0, 100)}`);
+function resolveTaskKind(task: string, kind?: TaskKind): TaskKind {
+  if (kind && kind !== "text") return kind;
+  if (isMemeTask(task)) return "meme";
+  if (isVisualizationTask(task)) return "chart";
+  return "text";
+}
+
+async function runTaskGemini(task: string, kind: TaskKind = "text"): Promise<string> {
+  lastSaved = { viz: null, meme: null };
+  const resolvedKind = resolveTaskKind(task, kind);
+  console.log(`[bg-brain] Task (${MODEL}, ${resolvedKind}): ${task.slice(0, 100)}`);
   const start = Date.now();
 
   let contents = task;
-  if (isVisualizationTask(task)) {
+  let systemInstruction = SYSTEM_PROMPT;
+
+  if (resolvedKind === "chart") {
     const planResponse = await getGemini().models.generateContent({
       model: MODEL,
       contents: task,
@@ -116,20 +192,39 @@ async function runTaskGemini(task: string): Promise<string> {
     const plan = (planResponse.text ?? "").trim();
     console.log(`[bg-brain] Viz plan: ${plan.slice(0, 200)}`);
     contents = `User request: ${task}\n\nVisualization plan (follow this):\n${plan}\n\nNow output the HTML.`;
+    systemInstruction = VIZ_PROMPT;
+  } else if (resolvedKind === "meme") {
+    systemInstruction = MEME_PROMPT;
   }
 
   const response = await getGemini().models.generateContent({
     model: MODEL,
     contents,
-    config: { systemInstruction: isVisualizationTask(task) ? VIZ_PROMPT : SYSTEM_PROMPT },
+    config: { systemInstruction },
   });
 
-  const text = (response.text ?? "").trim();
+  let text = (response.text ?? "").trim();
   const elapsed = Date.now() - start;
-  const saved = saveHtmlFromResponse(text);
+  const savedPrefix = resolvedKind === "chart" ? "viz" : resolvedKind === "meme" ? "meme" : null;
+  let saved = savedPrefix ? saveHtmlFromResponse(text, savedPrefix) : null;
+
+  if (resolvedKind === "meme" && saved) {
+    const htmlPath = resolve(GENERATED_DIR, saved);
+    const htmlContent = readFileSync(htmlPath, "utf-8");
+    if (!isVisualMemeHtml(htmlContent)) {
+      console.log("[bg-brain] Meme was text-only — retrying with visual requirement");
+      const retry = await getGemini().models.generateContent({
+        model: MODEL,
+        contents: `${task}\n\nYour previous output was TEXT-ONLY — INVALID. Regenerate with a large inline SVG scene (character + props, ≥280px tall). Caption text is optional and secondary.`,
+        config: { systemInstruction: MEME_PROMPT },
+      });
+      text = (retry.text ?? "").trim();
+      saved = saveHtmlFromResponse(text, "meme");
+    }
+  }
 
   const summary = saved
-    ? text.replace(/```(?:html)?\s*\n[\s\S]*?```/i, `[Chart saved as ${saved}]`).trim()
+    ? text.replace(/```(?:html)?\s*\n[\s\S]*?```/i, `[${resolvedKind === "meme" ? "Meme" : "Chart"} saved as ${saved}]`).trim()
     : text;
 
   const result = (summary || "No output.").slice(0, 4000);
@@ -141,9 +236,9 @@ async function runTaskAntigravity(_task: string): Promise<string> {
   throw new Error("Antigravity backend not wired yet — set BRAIN_BACKEND=gemini for local dev");
 }
 
-async function runTask(task: string): Promise<string> {
+async function runTask(task: string, kind: TaskKind = "text"): Promise<string> {
   if (BACKEND === "antigravity") return runTaskAntigravity(task);
-  return runTaskGemini(task);
+  return runTaskGemini(task, kind);
 }
 
 async function seed(): Promise<void> {
@@ -165,28 +260,25 @@ const server = createServer(async (req, res) => {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
-      if (busy) {
-        res.writeHead(429, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Brain is busy" }));
-        return;
-      }
       try {
-        const { task } = JSON.parse(body);
-        busy = true;
-        const result = await runTask(task);
-        busy = false;
-        const lastVisual = getLastSavedVisual();
+        const { task, kind = "text" } = JSON.parse(body);
+        const result = await enqueueTask(task, kind);
+        const lastVisual = getLastSaved("viz");
+        const lastMeme = getLastSaved("meme");
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ result, visualUrl: lastVisual ? `/generated/${lastVisual}` : undefined }));
+        res.end(JSON.stringify({
+          result,
+          visualUrl: lastVisual ? `/generated/${lastVisual}` : undefined,
+          memeUrl: lastMeme ? `/generated/${lastMeme}` : undefined,
+        }));
       } catch (err) {
-        busy = false;
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: (err as Error).message }));
       }
     });
   } else if (req.method === "GET" && req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: seeded ? "ready" : "seeding", busy, backend: BACKEND, model: MODEL }));
+    res.end(JSON.stringify({ status: seeded ? "ready" : "seeding", busy, queue: taskQueue.length, backend: BACKEND, model: MODEL }));
   } else {
     res.writeHead(404);
     res.end("Not found");
