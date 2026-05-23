@@ -15,6 +15,13 @@ export const config = {
   openai: {
     apiKey: required("OPENAI_API_KEY"),
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY ?? "",
+    model: process.env.GEMINI_MODEL ?? "gemini-3.5-flash",
+  },
+  brain: {
+    backend: (process.env.BRAIN_BACKEND ?? "gemini") as "gemini" | "antigravity",
+  },
   server: {
     port: parseInt(process.env.PORT ?? "3335", 10),
     authToken: process.env.BROWSER_AUTH_TOKEN ?? "",

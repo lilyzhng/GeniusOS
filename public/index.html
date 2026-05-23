@@ -18,7 +18,7 @@ body {
 }
 
 :root {
-  --bg: #f5f4f0;
+  --bg: #ffffff;
   --device-bg: linear-gradient(170deg, #3c3836 0%, #282828 40%, #1d1d1d 100%);
   --device-shadow: 0 40px 80px rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
   --antenna-bg: linear-gradient(to bottom, #6b6866, #3c3836);
@@ -64,7 +64,7 @@ body {
 }
 
 [data-theme="light"] {
-  --bg: #e0deda;
+  --bg: #ffffff;
   --device-bg: linear-gradient(170deg, #f5f5f3 0%, #eae9e6 40%, #e0dfdc 100%);
   --device-shadow: 0 40px 80px rgba(0,0,0,0.12), 0 8px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
   --antenna-bg: linear-gradient(to bottom, #c8c6c3, #b0aeab);
@@ -527,14 +527,37 @@ body {
   top: 50%;
   transform: translateY(-50%);
   width: 540px;
-  height: 70vh;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #ffffff;
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
+#visual-area svg {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  min-height: 360px;
+  height: auto;
+}
+#visual-area .container,
+#visual-area .card,
+#visual-area [class*="card"],
+#visual-area [class*="panel"],
+#visual-area [class*="wrapper"] {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
 #visual-area.visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+.main-layout:has(#visual-area.visible) .device {
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 </style>
@@ -1004,6 +1027,10 @@ function connect() {
 
 const visualArea = document.getElementById('visual-area');
 
+function scopeChartStyles(css) {
+  return css.replace(/(^|[\s,>+~])body(?=[\s,{.#:[])/gm, '$1#visual-area');
+}
+
 function showVisual(url) {
   fetch(url)
     .then(r => r.text())
@@ -1013,8 +1040,12 @@ function showVisual(url) {
       const style = doc.querySelector('style');
       const body = doc.body;
       visualArea.innerHTML = '';
-      if (style) visualArea.appendChild(style.cloneNode(true));
-      visualArea.innerHTML += body.innerHTML;
+      if (style) {
+        const scoped = document.createElement('style');
+        scoped.textContent = scopeChartStyles(style.textContent);
+        visualArea.appendChild(scoped);
+      }
+      visualArea.insertAdjacentHTML('beforeend', body.innerHTML);
       visualArea.querySelectorAll('script').forEach(old => {
         const s = document.createElement('script');
         s.textContent = old.textContent;

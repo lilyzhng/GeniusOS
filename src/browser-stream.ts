@@ -23,9 +23,9 @@ Speaking style:
 - When Lily interrupts or says "stop," immediately stop talking.
 - Wait for Lily to speak first. Don't fill silence. If she pauses or hasn't said anything meaningful yet, stay quiet.
 
-You have a background brain (Claude CLI) that can search the web, read files, run code, check calendars, take actions. Use the use_cli tool whenever you need to look something up or do something. Write a clear, specific task description.
+You have a background brain (Gemini 3.5 Flash) that can analyze local data and create visualizations. Use the use_cli tool whenever you need to look something up or do something. Write a clear, specific task description.
 
-When asked to visualize or chart something, send a SINGLE short tool call like "Create a chart showing Uber Q1 2026 revenue and EBITDA trends." The background brain already has the data loaded locally, so don't tell it to fetch or download data files. For non-data tasks (weather, web lookups, etc.), web search is fine.
+When asked to visualize or chart something, send a SINGLE short tool call describing what insight Lily wants — e.g. "Visualize Uber Q1 2026 earnings: how revenue and EBITDA trended over the last five quarters." The background brain has the data loaded locally and will pick the best chart layout. Don't prescribe chart type unless Lily asked for a specific format.
 
 When a tool returns a result, never read it verbatim. Paraphrase in one or two short sentences.`;
 
@@ -33,7 +33,7 @@ const toolDefinitions = [
   {
     type: "function" as const,
     name: "use_cli",
-    description: "Send a task to your background brain (Claude CLI). It can search the web, read files, run code, and create visualizations. For charts and data viz, it already has local data files loaded, so just say what to create. Keep task descriptions short and specific.",
+    description: "Send a task to your background brain (Gemini). It has local data files loaded and can create chart visualizations. Keep task descriptions short and specific.",
     parameters: {
       type: "object",
       properties: {
@@ -273,7 +273,7 @@ function handleOpenAIEvent(
 
 function executeTool(name: string, args: Record<string, string>, session: BrowserSession): Promise<string> {
   if (name === "use_cli") {
-    return runClaude(args.task || "", session);
+    return runBgBrain(args.task || "", session);
   }
   return Promise.resolve(`Unknown tool: ${name}`);
 }
@@ -287,22 +287,28 @@ function getGeneratedFiles(): Set<string> {
   }
 }
 
-function runClaude(task: string, session: BrowserSession): Promise<string> {
+function flushNewVisuals(
+  filesBefore: Set<string>,
+  sentFiles: Set<string>,
+  session: BrowserSession
+): void {
+  const current = getGeneratedFiles();
+  for (const file of current) {
+    if (!filesBefore.has(file) && !sentFiles.has(file) && file.endsWith(".html")) {
+      sentFiles.add(file);
+      console.log(`[cli] Detected new file: ${file}`);
+      send(session, { type: "visual", url: `/generated/${file}` });
+    }
+  }
+}
+
+function runBgBrain(task: string, session: BrowserSession): Promise<string> {
   const filesBefore = getGeneratedFiles();
 
   const sentFiles = new Set<string>();
-  const pollInterval = setInterval(() => {
-    const current = getGeneratedFiles();
-    for (const file of current) {
-      if (!filesBefore.has(file) && !sentFiles.has(file) && file.endsWith(".html")) {
-        sentFiles.add(file);
-        console.log(`[cli] Detected new file (poll): ${file}`);
-        send(session, { type: "visual", url: `/generated/${file}` });
-      }
-    }
-  }, 2000);
+  const pollInterval = setInterval(() => flushNewVisuals(filesBefore, sentFiles, session), 2000);
 
-  const augmented = `${task}\n\nIMPORTANT: Save HTML to ${GENERATED_DIR}/. Self-contained (inline CSS, NO external scripts/CDN). Light theme only (white background, dark text, muted colors).`;
+  const augmented = `${task}\n\nChart rules: chart-first layout (large SVG hero, ≥360px tall), no outer container/card wrapper, no KPI tag panels — flat on white. Output HTML in a \`\`\`html code block (inline CSS/SVG only, light theme).`;
   console.log(`[cli] Sending to bg-brain: "${task.slice(0, 80)}"`);
   const body = JSON.stringify({ task: augmented });
 
@@ -315,9 +321,16 @@ function runClaude(task: string, session: BrowserSession): Promise<string> {
       let data = "";
       resp.on("data", (chunk) => (data += chunk));
       resp.on("end", () => {
-        clearInterval(pollInterval);
         try {
-          const { result, error } = JSON.parse(data);
+          const { result, error, visualUrl } = JSON.parse(data);
+          flushNewVisuals(filesBefore, sentFiles, session);
+          if (visualUrl && !sentFiles.has(visualUrl.replace(/^\/generated\//, ""))) {
+            const file = visualUrl.replace(/^\/generated\//, "");
+            sentFiles.add(file);
+            console.log(`[cli] Visual from bg-brain response: ${file}`);
+            send(session, { type: "visual", url: visualUrl });
+          }
+          clearInterval(pollInterval);
           if (error) {
             console.error(`[cli] bg-brain error: ${error}`);
             res(`Error: ${error}`);
@@ -327,6 +340,7 @@ function runClaude(task: string, session: BrowserSession): Promise<string> {
             res(prefix + (result || "No output."));
           }
         } catch {
+          flushNewVisuals(filesBefore, sentFiles, session);
           clearInterval(pollInterval);
           res(data.slice(0, 4000) || "No output.");
         }
