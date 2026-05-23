@@ -58,6 +58,17 @@ export async function startServer(): Promise<void> {
     reply.type("text/html").send(html);
   });
 
+  app.get("/icons/:filename", async (request, reply) => {
+    const { filename } = request.params as { filename: string };
+    const filePath = resolve(__dirname, "../public/icons", filename);
+    if (!existsSync(filePath)) {
+      reply.code(404).send("Not found");
+      return;
+    }
+    reply.type(extname(filename) === ".svg" ? "image/svg+xml" : "application/octet-stream")
+      .send(readFileSync(filePath));
+  });
+
   app.get("/generated/:filename", async (request, reply) => {
     const { filename } = request.params as { filename: string };
     const filePath = resolve(__dirname, "../public/generated", filename);
@@ -76,11 +87,16 @@ export async function startServer(): Promise<void> {
     reply.type(mimeTypes[ext] || "application/octet-stream").send(readFileSync(filePath));
   });
 
-  app.get("/health", async () => ({ status: "ok", service: "walkie-talkie" }));
+  app.get("/health", async () => ({
+    status: "ok",
+    service: "walkie-talkie",
+    voiceBackend: config.voice.backend,
+    voiceLiveModel: config.voice.backend === "gemini-live" ? config.voice.liveModel : undefined,
+  }));
 
   await app.ready();
 
   httpServer.listen(port, "0.0.0.0", () => {
-    console.log(`Walkie-Talkie listening on http://localhost:${port}`);
+    console.log(`Walkie-Talkie listening on http://localhost:${port} (voice: ${config.voice.backend})`);
   });
 }

@@ -1,140 +1,125 @@
-# Walkie-Talkie → Agent Home
+# Walkie-Talkie to Agent Home
 
 Built during DeepMind I/O Hackathon, 2026-05-23.
 
 ## What it is
 
-Walkie-Talkie is a **dual-model system**:
+A **dual-model voice agent**: press to talk, the front-end handles the conversation, the background does the work.
 
-1. **Front-end model** — real-time voice interaction (listen, speak, pivot mid-conversation)
-2. **Background model** — tool execution in a persistent sandbox (files, charts, generative UI)
+1. **Front-end model** handles real-time voice interaction (listen, speak, pivot mid-conversation)
+2. **Background model** handles tool execution in a persistent sandbox (files, charts, generative UI)
 
-Press to talk. The front-end handles the conversation; the background does the work.
+LLM products today split into two camps: **full-duplex** (live voice) and **turn-based** (chat + tools). One is great at talking, the other is great at doing. Nothing sits in between.
 
-## The gap it fills
+Walkie-Talkie stitches both: natural real-time voice up front, powerful tool execution in the back. Gemini 3.5 Flash as the background brain keeps latency low.
 
-LLM products split into two camps today: **full-duplex** (live voice — GPT Realtime, Moshi) and **turn-based** (chat + tools — Claude Code, Gemini). One is great at talking; the other is great at doing. Nothing live sits in between.
-
-Walkie-Talkie stitches both: natural real-time interaction up front, powerful tool execution in the back. [More on the interaction-model gap →](https://lilyzhng.github.io/posts/interaction-model/)
-
-# Managed Agent
-
-**Phase 1 (today) — no managed agent.** The background brain calls `gemini-3.5-flash` directly via the Gemini API (`BRAIN_BACKEND=gemini`). Charts and memes are generated locally and written to `public/generated/`. This is a standard model API, not a managed agent sandbox.
-
-**Phase 2 (planned, not wired yet) — managed agent.** Same voice shell; only the background brain swaps to Antigravity (`BRAIN_BACKEND=antigravity`). The plan:
+## Architecture
 
 ```
 Browser (hold-to-talk)
-  │ WebSocket /voice/browser
-  ▼
-browser-stream.ts              ← OpenAI Realtime (front-end model)
-  │ tool: use_cli("organize screenshots")
-  │ POST http://localhost:3336/task
-  ▼
-bg-brain.ts                    ← BRAIN_BACKEND=antigravity (planned)
-  │
-  │  interactions.create({
-  │    agent: "antigravity-preview-05-2026",
-  │    environment,              ← persistent sandbox = Agent Home
-  │    previous_interaction_id   ← state across commands
-  │  })
-  ▼
-Remote sandbox (/workspace/...)  ← agent runs tools, moves files, writes artifacts
-  │
-  │  download tarball
-  ▼
-public/generated/              ← browser displays charts / Agent Home updates
+  | WebSocket /voice/browser
+  v
+browser-stream.ts         <- voice model (real-time conversation)
+  | tool call: use_cli("make a chart of X")
+  | POST http://localhost:3336/task
+  v
+bg-brain.ts               <- Gemini 3.5 Flash (tool execution)
+  | generates files
+  v
+public/generated/         <- browser displays charts, memes, artifacts
 ```
 
-The front-end model stays the same in both phases. Managed agents would only replace the background brain — for tool execution and persistent state in a remote sandbox.
-
-## Stack (today)
+## Stack
 
 | Layer | Tech |
 |-------|------|
-| Voice UI | `public/index.html` (hold-to-talk) |
-| Voice | OpenAI Realtime (`gpt-realtime-2`) |
-| Tools / tasks | Local **background brain** (Claude CLI on port 3336) |
-| Hackathon target | Gemini 3.5 Flash + Antigravity managed agent |
+| Voice UI | `public/index.html` (hold-to-talk button) |
+| Voice model (default) | OpenAI Realtime (`gpt-realtime-2`) — `VOICE_BACKEND=openai` |
+| Voice model (optional) | Gemini Live API — `VOICE_BACKEND=gemini-live` |
+| Background brain | Gemini 3.5 Flash API (port 3336) |
+| Server | Fastify + WebSocket (port 3335) |
 
 ## Prerequisites
 
 - Node.js 18+
-- `OPENAI_API_KEY` in `.env` (voice)
-- `claude` CLI installed and logged in (background brain / tool calls)
+- `GEMINI_API_KEY` in `.env` (background brain; also voice when using Gemini Live)
+- `OPENAI_API_KEY` in `.env` (only when `VOICE_BACKEND=openai`, the default)
 
-## Setup (once)
+## Setup
 
 ```bash
-cd walkie-talkie
 npm install
-cp .env.example .env
-# Edit .env — at minimum set OPENAI_API_KEY=
+cp .env.example .env    # edit keys + optional VOICE_BACKEND
+npm run verify-gemini   # smoke test background Gemini API
+npm run verify-gemini-live   # if using VOICE_BACKEND=gemini-live
 ```
 
-Optional in `.env`:
+Optional `.env` settings:
 
-```bash
-PORT=3335                  # default
+```
+VOICE_BACKEND=openai       # openai (default) | gemini-live
+GEMINI_LIVE_MODEL=gemini-2.5-flash-native-audio-preview-12-2025
+OPENAI_API_KEY=            # required for VOICE_BACKEND=openai
+PORT=3335                  # voice server port (default)
+BRAIN_BACKEND=gemini       # default
 BROWSER_AUTH_TOKEN=        # leave empty for local dev
 ```
 
-## Launch (two terminals)
+## Launch
 
-Voice and tools are **two separate processes**. Both must be running for weather, charts, file tasks, etc.
-
-**Terminal 1 — voice server**
+Voice and tools are two separate processes. Both must be running.
 
 ```bash
+# Terminal 1: voice server
 npm run dev
-```
+# -> http://localhost:3335
 
-Open http://localhost:3335
-
-**Terminal 2 — background brain**
-
-```bash
+# Terminal 2: background brain
 ./launch-bg-brain.sh
-```
-
-Check: `curl http://localhost:3336/health` → `{"status":"ready","busy":false}`
-
-### Quick health check
-
-```bash
-curl http://localhost:3335/health   # walkie-talkie
-curl http://localhost:3336/health   # bg-brain
+# -> http://localhost:3336/health
 ```
 
 ## Usage
 
-1. Open http://localhost:3335 in Chrome (mic works best).
-2. Allow microphone access.
-3. Hold the talk button and speak.
-4. Simple chat uses voice only. Tasks like weather or charts call the background brain (Terminal 2).
+1. Open http://localhost:3335 in Chrome
+2. Allow microphone access
+3. Hold the talk button and speak
+4. Simple chat uses voice only. Tasks like charts call the background brain.
 
-If Jackie says *"Background brain not running"*, start Terminal 2 — that is **not** an OpenAI credits error.
+If the voice says "Background brain not running", start Terminal 2.
 
 ## Scripts
 
 | Command | What |
 |---------|------|
 | `npm run dev` | Voice server (tsx, port 3335) |
-| `./launch-bg-brain.sh` | Tool backend (port 3336) |
-| `npm run build` | Compile TypeScript → `dist/` |
+| `./launch-bg-brain.sh` | Background brain (port 3336) |
+| `npm run verify-gemini` | Smoke test Gemini 3.5 Flash (background) |
+| `npm run verify-gemini-live` | Smoke test Gemini Live (voice option) |
+| `npm run build` | Compile TypeScript |
 | `npm start` | Run compiled server |
-
-## Logs
-
-- Background brain: `bg-brain.log` (after `./launch-bg-brain.sh`)
 
 ## Repo layout
 
 ```
 src/
-  index.ts          entry
-  server.ts         HTTP + WebSocket
-  browser-stream.ts OpenAI Realtime + tool routing
-  bg-brain.ts       Claude CLI task server
-public/index.html   UI
+  index.ts              entry point
+  server.ts             HTTP + WebSocket server
+  browser-stream.ts     real-time voice + tool routing
+  gemini-live-stream.ts Gemini Live voice backend (optional)
+  bg-brain.ts           Gemini 3.5 Flash task server
+  config.ts             env config
+public/
+  index.html            voice UI
+  generated/            output artifacts (charts, memes)
+  icons/                UI assets
+scripts/
+  verify-gemini.ts      background API smoke test
+  verify-gemini-live.ts Gemini Live smoke test
+  test-gemini-image.ts  image generation test
+  test-tool-audio.ts    audio tool test
 ```
+
+## Future: Managed Agent (Antigravity)
+
+The background brain could swap from direct Gemini API calls to an Antigravity managed agent (`BRAIN_BACKEND=antigravity`). This would give the agent a persistent remote sandbox with state across commands, turning the background into a true "Agent Home". The voice shell stays the same, only the execution backend changes.
