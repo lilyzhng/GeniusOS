@@ -22,24 +22,77 @@ Speaking style:
 - Talk like a sharp friend, not a customer service rep.
 - When Lily interrupts or says "stop," immediately stop talking.
 - Wait for Lily to speak first. Don't fill silence. If she pauses or hasn't said anything meaningful yet, stay quiet.
+- Lily toggles the radio on and off with the PTT button. When off, she cannot hear you.
 
-You have a background brain (Gemini 3.5 Flash) that can analyze local data and create visualizations. Use the use_cli tool whenever you need to look something up or do something. Write a clear, specific task description.
+You have a background brain (Gemini 3.5 Flash) for charts and data tasks. Agent Home is the workspace beside the walkie-talkie — windows pop up automatically when needed.
 
-When asked to visualize or chart something, send a SINGLE short tool call describing what insight Lily wants — e.g. "Visualize Uber Q1 2026 earnings: how revenue and EBITDA trended over the last five quarters." The background brain has the data loaded locally and will pick the best chart layout. Don't prescribe chart type unless Lily asked for a specific format.
+- use_cli — charts and data (opens a chart window when ready)
+- play_music — play a song (opens a music window)
+- open_text — show text (opens a notes window)
+- play_video — play a video (opens a video window)
+
+When asked to visualize or chart something, use use_cli. When asked to play music, use play_music. When asked to write something, use open_text with the full text.
 
 When a tool returns a result, never read it verbatim. Paraphrase in one or two short sentences.`;
+
+const CHANNEL_HINTS: Record<string, string> = {
+  charts: "Active channel: CH-01 Charts. Prefer use_cli for charts, data, and visualizations.",
+  audio: "Active channel: CH-02 Audio. Prefer play_music when Lily wants music or audio.",
+  video: "Active channel: CH-03 Video. Prefer play_video for video; use_cli only if Lily explicitly asks for a chart.",
+};
+
+function buildInstructions(mode: string): string {
+  const hint = CHANNEL_HINTS[mode] ?? CHANNEL_HINTS.charts;
+  return `${SYSTEM_PROMPT}\n\n${hint}`;
+}
 
 const toolDefinitions = [
   {
     type: "function" as const,
     name: "use_cli",
-    description: "Send a task to your background brain (Gemini). It has local data files loaded and can create chart visualizations. Keep task descriptions short and specific.",
+    description: "Send a task to Gemini brain for charts and data analysis.",
     parameters: {
       type: "object",
       properties: {
         task: { type: "string", description: "The task to perform" },
       },
       required: ["task"],
+    },
+  },
+  {
+    type: "function" as const,
+    name: "play_music",
+    description: "Play music in the Music app. Use when Lily asks to play music or a song.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Optional song name or mood" },
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    name: "open_text",
+    description: "Open a notes window with text. Use for summaries, lists, or anything Lily wants written out.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Window title" },
+        content: { type: "string", description: "The full text to show" },
+      },
+      required: ["content"],
+    },
+  },
+  {
+    type: "function" as const,
+    name: "play_video",
+    description: "Open a video in the video window. Use on CH-03 or when Lily asks to play or show a video.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Video title" },
+        url: { type: "string", description: "Optional video URL" },
+      },
     },
   },
 ];
@@ -50,6 +103,7 @@ interface BrowserSession {
   transcript: string[];
   isSpeaking: boolean;
   mutemic: boolean;
+  channelMode: string;
 }
 
 export function handleBrowserStream(browserWs: WebSocket): void {
@@ -59,6 +113,7 @@ export function handleBrowserStream(browserWs: WebSocket): void {
     isSpeaking: false,
     mutemic: false,
     transcript: [],
+    channelMode: "charts",
   };
 
   browserWs.on("message", (data) => {
@@ -66,9 +121,16 @@ export function handleBrowserStream(browserWs: WebSocket): void {
 
     switch (msg.type) {
       case "start":
-        console.log("[browser] Session start");
+        console.log("[browser] Session start", msg.channel ?? "CH-01", msg.mode ?? "charts");
+        session.channelMode = msg.mode ?? "charts";
         connectOpenAI(session, msg.context ?? null);
         send(session, { type: "status", state: "listening" });
+        break;
+
+      case "channel":
+        session.channelMode = msg.mode ?? "charts";
+        console.log(`[browser] Channel → ${msg.channel} (${session.channelMode})`);
+        updateChannelInstructions(session);
         break;
 
       case "audio":
@@ -103,6 +165,19 @@ export function handleBrowserStream(browserWs: WebSocket): void {
   });
 }
 
+function updateChannelInstructions(session: BrowserSession): void {
+  if (session.openaiWs?.readyState !== WebSocket.OPEN) return;
+  session.openaiWs.send(
+    JSON.stringify({
+      type: "session.update",
+      session: {
+        type: "realtime",
+        instructions: buildInstructions(session.channelMode),
+      },
+    })
+  );
+}
+
 function connectOpenAI(session: BrowserSession, context: string | null): void {
   const ws = new WebSocket(OPENAI_REALTIME_URL, {
     headers: { Authorization: `Bearer ${config.openai.apiKey}` },
@@ -120,7 +195,7 @@ function connectOpenAI(session: BrowserSession, context: string | null): void {
           type: "realtime",
           model: "gpt-realtime-2",
           output_modalities: ["audio"],
-          instructions: SYSTEM_PROMPT,
+          instructions: buildInstructions(session.channelMode),
           audio: {
             input: {
               format: { type: "audio/pcm", rate: 24000 },
@@ -141,21 +216,21 @@ function connectOpenAI(session: BrowserSession, context: string | null): void {
       })
     );
 
-    const greetingText = context
-      ? `[System: Lily asked you to: ${context}. Greet her briefly and start on this right away.]`
-      : "[System: Greet Lily naturally and briefly. Let her lead the conversation.]";
-
-    ws.send(
-      JSON.stringify({
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "user",
-          content: [{ type: "input_text", text: greetingText }],
-        },
-      })
-    );
-    ws.send(JSON.stringify({ type: "response.create" }));
+    if (context) {
+      ws.send(
+        JSON.stringify({
+          type: "conversation.item.create",
+          item: {
+            type: "message",
+            role: "user",
+            content: [{
+              type: "input_text",
+              text: `[System: Lily asked you to: ${context}. Wait for her to turn the radio on, then greet her briefly and start on this.]`,
+            }],
+          },
+        })
+      );
+    }
   });
 
   ws.on("message", (data) => {
@@ -275,6 +350,19 @@ function executeTool(name: string, args: Record<string, string>, session: Browse
   if (name === "use_cli") {
     return runBgBrain(args.task || "", session);
   }
+  if (name === "play_music") {
+    send(session, { type: "music", query: args.query || "", song: "demo" });
+    return Promise.resolve("Music is playing.");
+  }
+  if (name === "open_text") {
+    const content = args.content || "";
+    send(session, { type: "text", title: args.title || "Notes", content });
+    return Promise.resolve("Opened notes with the content.");
+  }
+  if (name === "play_video") {
+    send(session, { type: "video", title: args.title || "Video", url: args.url || "" });
+    return Promise.resolve("Video is playing.");
+  }
   return Promise.resolve(`Unknown tool: ${name}`);
 }
 
@@ -336,7 +424,7 @@ function runBgBrain(task: string, session: BrowserSession): Promise<string> {
             res(`Error: ${error}`);
           } else {
             console.log(`[cli] bg-brain result: ${(result || "").slice(0, 200)}`);
-            const prefix = sentFiles.size > 0 ? "[A visualization is now showing on the user's screen. Briefly describe what it shows.]\n\n" : "";
+            const prefix = sentFiles.size > 0 ? "[A chart window just opened beside the walkie-talkie. Briefly describe what it shows.]\n\n" : "";
             res(prefix + (result || "No output."));
           }
         } catch {

@@ -113,6 +113,7 @@ body {
   width: 360px;
   height: 590px;
   padding-bottom: 10px;
+  flex-shrink: 0;
   background: var(--device-bg);
   border-radius: 32px 32px 28px 28px;
   box-shadow: var(--device-shadow);
@@ -165,6 +166,8 @@ body {
   gap: 14px;
   margin-top: 14px;
   align-items: center;
+  width: 132px;
+  flex-shrink: 0;
 }
 .led {
   width: 7px;
@@ -172,7 +175,8 @@ body {
   border-radius: 50%;
   background: var(--led-bg);
   border: 1px solid var(--led-border);
-  transition: all 0.4s;
+  transition: background 0.4s, border-color 0.4s, box-shadow 0.4s;
+  flex-shrink: 0;
 }
 .led.on-blue {
   background: #8DCDF1;
@@ -196,7 +200,35 @@ body {
   color: var(--label-color);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  transition: color 0.4s;
+  width: 36px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.channel-dial {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--led-border);
+  background: var(--led-bg);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-color: var(--led-border);
+}
+.channel-dial:hover { border-color: var(--label-color); }
+.channel-dial-knob {
+  width: 2px;
+  height: 7px;
+  background: var(--label-color);
+  border-radius: 1px;
+  transform: translateY(-2px) rotate(0deg);
+  transform-origin: center 5px;
+  transition: transform 0.25s ease;
+  pointer-events: none;
 }
 
 .screen {
@@ -460,13 +492,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  touch-action: none;
 }
 [data-theme="light"] #ptt-btn {
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   border: 2px solid #c8c6c3;
 }
 [data-theme="light"] #ptt-btn.active {
-  border-color: #999;
+  border-color: #888;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   animation: none;
 }
@@ -478,6 +512,7 @@ body {
 }
 #ptt-btn.active {
   border-color: var(--ptt-active-border);
+  color: var(--ptt-active-color);
   box-shadow:
     0 0 20px var(--ptt-glow),
     0 6px 16px rgba(0,0,0,0.4);
@@ -488,76 +523,159 @@ body {
   50% { box-shadow: 0 0 0 10px transparent, 0 6px 16px rgba(0,0,0,0.4); }
 }
 
+.status-text.ready { color: var(--status-active); }
 
 .side-btn {
   position: absolute;
-  width: 3px;
   background: var(--side-btn-bg);
   border-radius: 0 2px 2px 0;
   right: -4px;
-  transition: background 0.4s;
+  transition: background 0.4s, transform 0.15s, box-shadow 0.2s;
 }
-.side-btn.top,
+.side-btn.channel,
+.side-btn.theme,
 .side-btn.bot {
   height: 28px;
   width: 6px;
   right: -6px;
   border-radius: 0 3px 3px 0;
   cursor: pointer;
-  transition: background 0.4s, transform 0.15s;
 }
-.side-btn.top { top: 120px; }
-.side-btn.bot { top: 156px; }
-.side-btn.top:hover,
-.side-btn.bot:hover { transform: scaleX(1.3); }
-.side-btn.top:active,
-.side-btn.bot:active { transform: scaleX(0.8); }
+.side-btn.channel { top: 96px; }
+.side-btn.theme { top: 132px; }
+.side-btn.bot { top: 168px; }
+.side-btn:hover { transform: scaleX(1.3); }
+.side-btn:active { transform: scaleX(0.8); }
 
 .main-layout {
-  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 48px;
   min-height: 100vh;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 48px;
+  box-sizing: border-box;
 }
 
-#visual-area {
-  position: absolute;
-  left: calc(50% + 220px);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 540px;
-  max-height: 85vh;
-  overflow-y: auto;
+#agent-home {
+  flex: 1;
+  min-width: 0;
+  min-height: 520px;
+  position: relative;
   background: #ffffff;
+}
+
+.agent-window {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  background: #fff;
+}
+.agent-window.open { display: flex; }
+
+.window-chrome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #ececec 0%, #e3e3e3 100%);
+  border-bottom: 1px solid #ccc;
+  flex-shrink: 0;
+}
+.traffic-lights { display: flex; gap: 7px; align-items: center; }
+.traffic-lights .tl {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.traffic-lights .close { background: #ff5f57; cursor: pointer; }
+.traffic-lights .minimize { background: #febc2e; }
+.traffic-lights .maximize { background: #28c840; }
+.window-title {
+  flex: 1;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  margin-right: 52px;
+}
+
+.window-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+  padding: 0;
+}
+
+.channel-pane {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
   opacity: 0;
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  visibility: hidden;
   pointer-events: none;
 }
-#visual-area svg {
+.channel-pane.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#chart-root svg {
   display: block;
   width: 100%;
-  max-width: 520px;
+  max-width: 100%;
   min-height: 360px;
   height: auto;
 }
-#visual-area .container,
-#visual-area .card,
-#visual-area [class*="card"],
-#visual-area [class*="panel"],
-#visual-area [class*="wrapper"] {
+#chart-root .container,
+#chart-root .card,
+#chart-root [class*="card"],
+#chart-root [class*="panel"],
+#chart-root [class*="wrapper"] {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
   padding: 0 !important;
 }
-#visual-area.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
 
-.main-layout:has(#visual-area.visible) .device {
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+.music-panel {
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.music-panel h3 { font-size: 16px; margin-bottom: 4px; color: #111; font-weight: 500; }
+.music-panel p { font-size: 13px; color: #666; margin-bottom: 16px; }
+.music-panel audio { width: 100%; }
+
+.text-panel {
+  padding: 0;
+  height: 100%;
+  min-height: 360px;
+}
+.text-panel textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  border: none;
+  padding: 16px 18px;
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #222;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
 }
 
 </style>
@@ -568,8 +686,9 @@ body {
 
 <div class="device">
   <div class="antenna"></div>
-  <div class="side-btn top"></div>
-  <div class="side-btn bot"></div>
+  <div class="side-btn channel" id="channel-btn" title="Change channel"></div>
+  <div class="side-btn theme" id="theme-btn" title="Theme"></div>
+  <div class="side-btn bot" id="mute-btn" title="Mute"></div>
 
   <div class="speaker-grille">
     <div class="grille-line"></div><div class="grille-line"></div>
@@ -581,7 +700,10 @@ body {
     <div class="led" id="led-1"></div>
     <div class="led" id="led-2"></div>
     <div class="led" id="led-3"></div>
-    <span class="channel-label">CH-01</span>
+    <button type="button" class="channel-dial" id="channel-dial" title="Change channel" aria-label="Change channel">
+      <span class="channel-dial-knob"></span>
+    </button>
+    <span class="channel-label" id="channel-label">CH-01</span>
   </div>
 
   <div class="screen">
@@ -598,12 +720,28 @@ body {
 
   <div class="controls">
     <div class="live-waveform" id="live-waveform"></div>
-    <div class="status-text" id="status">Press to talk</div>
-    <button id="ptt-btn">PTT</button>
+    <div class="status-text" id="status">Off</div>
+    <button id="ptt-btn" type="button" title="Power on / off">PTT</button>
   </div>
 </div>
 
-<div id="visual-area"></div>
+<div id="agent-home" class="agent-home">
+  <div id="agent-window" class="agent-window">
+    <div class="window-chrome">
+      <div class="traffic-lights">
+        <span class="tl close" id="window-close" title="Close"></span>
+        <span class="tl minimize"></span>
+        <span class="tl maximize"></span>
+      </div>
+      <div class="window-title" id="window-title"></div>
+    </div>
+    <div class="window-content" id="window-content">
+      <div class="channel-pane active" id="channel-pane-charts" data-mode="charts"></div>
+      <div class="channel-pane" id="channel-pane-audio" data-mode="audio"></div>
+      <div class="channel-pane" id="channel-pane-video" data-mode="video"></div>
+    </div>
+  </div>
+</div>
 
 </div>
 
@@ -624,7 +762,11 @@ const statusEl = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
 const toolsEl = document.getElementById('tools');
 const pttBtn = document.getElementById('ptt-btn');
-const muteBtn = document.querySelector('.side-btn.bot');
+const channelBtn = document.getElementById('channel-btn');
+const channelDial = document.getElementById('channel-dial');
+const themeBtn = document.getElementById('theme-btn');
+const muteBtn = document.getElementById('mute-btn');
+const channelLabelEl = document.getElementById('channel-label');
 const muteIcon = document.getElementById('mute-icon');
 const led1 = document.getElementById('led-1');
 const led2 = document.getElementById('led-2');
@@ -650,15 +792,106 @@ let currentState = '';
 
 let toolsUsed = false;
 
+const CHANNELS = [
+  { label: 'CH-01', mode: 'charts', paneTitle: 'Chart' },
+  { label: 'CH-02', mode: 'audio', paneTitle: 'Music' },
+  { label: 'CH-03', mode: 'video', paneTitle: 'Video' },
+];
+let channelIndex = 0;
+const channelState = {
+  charts: { title: 'Chart', hasContent: false },
+  audio: { title: 'Music', hasContent: false },
+  video: { title: 'Video', hasContent: false },
+};
+
+const agentWindow = document.getElementById('agent-window');
+const windowTitle = document.getElementById('window-title');
+const windowContent = document.getElementById('window-content');
+const windowClose = document.getElementById('window-close');
+const channelDialKnob = channelDial.querySelector('.channel-dial-knob');
+
+function paneEl(mode) {
+  return document.getElementById(`channel-pane-${mode}`);
+}
+
+function pauseAllAgentMedia() {
+  windowContent.querySelectorAll('audio, video').forEach(el => el.pause());
+}
+
+function showActiveChannelPane() {
+  const mode = currentChannel().mode;
+  windowContent.querySelectorAll('.channel-pane').forEach(pane => {
+    pane.classList.toggle('active', pane.dataset.mode === mode);
+  });
+  const state = channelState[mode];
+  const ch = currentChannel();
+  const visible = state.hasContent;
+  agentWindow.classList.toggle('open', visible);
+  if (visible) windowTitle.textContent = state.title;
+}
+
+function currentChannel() {
+  return CHANNELS[channelIndex];
+}
+
+function pauseAgentMedia() {
+  pauseAllAgentMedia();
+}
+
+function reinjectScripts(container) {
+  container.querySelectorAll('script').forEach(old => {
+    const s = document.createElement('script');
+    s.textContent = old.textContent;
+    old.parentNode.replaceChild(s, old);
+  });
+}
+
+function setChannelWindow(mode, title, html) {
+  channelState[mode] = { title, hasContent: true };
+  const pane = paneEl(mode);
+  pane.innerHTML = html;
+  reinjectScripts(pane);
+  if (currentChannel().mode === mode) {
+    windowTitle.textContent = title;
+    agentWindow.classList.add('open');
+  }
+}
+
+function updateChannelUI() {
+  const ch = currentChannel();
+  channelLabelEl.textContent = ch.label;
+  if (channelDialKnob) {
+    channelDialKnob.style.transform = `translateY(-2px) rotate(${channelIndex * 120}deg)`;
+  }
+  channelDial.title = `${ch.label} · tap to change`;
+  channelBtn.title = `${ch.label} · tap to change`;
+}
+
+function sendChannelUpdate() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  const ch = currentChannel();
+  ws.send(JSON.stringify({ type: 'channel', channel: ch.label, mode: ch.mode }));
+}
+
+function cycleChannel() {
+  pauseAllAgentMedia();
+  channelIndex = (channelIndex + 1) % CHANNELS.length;
+  updateChannelUI();
+  sendChannelUpdate();
+  showActiveChannelPane();
+}
+
+updateChannelUI();
+
 function setStatus(text, cls) {
   statusEl.textContent = text;
   statusEl.className = 'status-text ' + (cls || '');
   currentState = cls || '';
-  led1.className = 'led' + (cls === 'connected' ? ' on-green' : '');
+  led1.className = 'led' + (isConnected ? ' on-green' : '');
   led2.className = 'led' + (cls === 'speaking' ? ' on-blue' : '');
   led3.className = 'led' + ((cls === 'thinking' || toolsUsed) ? ' on-amber' : '');
 
-  const isActive = cls === 'connected' || cls === 'speaking';
+  const isActive = isConnected;
   liveWaveform.classList.toggle('active', isActive);
   liveWaveform.classList.toggle('speaking', cls === 'speaking');
   if (isActive) startLiveWaveform();
@@ -675,7 +908,7 @@ function startLiveWaveform() {
 
     if (pendingListening && audioCtx && nextPlayTime <= audioCtx.currentTime + 0.1) {
       pendingListening = false;
-      setStatus('Listening', 'connected');
+      if (isConnected) setStatus('Listening', 'connected');
     }
 
     let activeAnalyser = null;
@@ -683,7 +916,7 @@ function startLiveWaveform() {
     if (currentState === 'speaking' && outAnalyser && outAnalyserData) {
       activeAnalyser = outAnalyser;
       activeData = outAnalyserData;
-    } else if (currentState === 'connected' && !isMuted && micAnalyser && micAnalyserData) {
+    } else if (isConnected && !isMuted && micAnalyser && micAnalyserData) {
       activeAnalyser = micAnalyser;
       activeData = micAnalyserData;
     }
@@ -967,7 +1200,7 @@ function connect() {
     setStatus('Connecting...', 'connected');
     try {
       await startMic();
-      ws.send(JSON.stringify({ type: 'start' }));
+      ws.send(JSON.stringify({ type: 'start', channel: currentChannel().label, mode: currentChannel().mode }));
       isConnected = true;
       isMuted = false;
       pttBtn.classList.add('active');
@@ -997,18 +1230,26 @@ function connect() {
         addToolResult(msg.name, msg.result);
         break;
       case 'visual':
-        showVisual(msg.url);
+        showVisual(msg.url, 'charts');
+        break;
+      case 'music':
+        showMusic(msg, 'audio');
+        break;
+      case 'text':
+        showText(msg, 'charts');
+        break;
+      case 'video':
+        showVideoWindow(msg, 'video');
         break;
       case 'status':
-        if (msg.state === 'listening') {
+        if (msg.state === 'listening' || msg.state === 'ready') {
           if (audioCtx && nextPlayTime > audioCtx.currentTime + 0.1) {
             pendingListening = true;
-          } else {
+          } else if (isConnected) {
             setStatus('Listening', 'connected');
             pendingListening = false;
           }
-        }
-        else if (msg.state === 'speaking') setStatus('Speaking', 'speaking');
+        } else if (msg.state === 'speaking') setStatus('Speaking', 'speaking');
         else if (msg.state === 'thinking') setStatus('Thinking', 'thinking');
         break;
       case 'error':
@@ -1025,13 +1266,25 @@ function connect() {
   ws.onerror = () => setStatus('Error', '');
 }
 
-const visualArea = document.getElementById('visual-area');
+const SONGS = [
+  { id: 'demo', title: 'Demo Track', artist: 'SoundHelix', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+];
 
-function scopeChartStyles(css) {
-  return css.replace(/(^|[\s,>+~])body(?=[\s,{.#:[])/gm, '$1#visual-area');
+function closeWindow() {
+  const mode = currentChannel().mode;
+  channelState[mode] = { title: currentChannel().paneTitle, hasContent: false };
+  paneEl(mode).innerHTML = '';
+  pauseAgentMedia();
+  agentWindow.classList.remove('open');
 }
 
-function showVisual(url) {
+windowClose.addEventListener('click', closeWindow);
+
+function scopeChartStyles(css) {
+  return css.replace(/(^|[\s,>+~])body(?=[\s,{.#:[])/gm, '$1#chart-root');
+}
+
+function showVisual(url, mode = currentChannel().mode) {
   fetch(url)
     .then(r => r.text())
     .then(html => {
@@ -1039,20 +1292,47 @@ function showVisual(url) {
       const doc = parser.parseFromString(html, 'text/html');
       const style = doc.querySelector('style');
       const body = doc.body;
-      visualArea.innerHTML = '';
+      let chartInner = '';
       if (style) {
-        const scoped = document.createElement('style');
-        scoped.textContent = scopeChartStyles(style.textContent);
-        visualArea.appendChild(scoped);
+        chartInner += `<style>${scopeChartStyles(style.textContent)}</style>`;
       }
-      visualArea.insertAdjacentHTML('beforeend', body.innerHTML);
-      visualArea.querySelectorAll('script').forEach(old => {
-        const s = document.createElement('script');
-        s.textContent = old.textContent;
-        old.parentNode.replaceChild(s, old);
-      });
-      visualArea.classList.add('visible');
+      chartInner += body.innerHTML;
+      setChannelWindow(mode, 'Chart', `<div id="chart-root">${chartInner}</div>`);
     });
+}
+
+function showMusic(msg, mode = currentChannel().mode) {
+  const song = msg.url
+    ? { title: msg.title || 'Music', artist: msg.artist || '', url: msg.url }
+    : SONGS.find(s => s.id === msg.song || s.title.toLowerCase().includes((msg.query || '').toLowerCase())) || SONGS[0];
+  const html =
+    `<div class="music-panel">` +
+    `<h3>${escapeHtml(song.title)}</h3>` +
+    `<p>${escapeHtml(song.artist)}</p>` +
+    `<audio controls autoplay src="${escapeHtml(song.url)}"></audio>` +
+    `</div>`;
+  setChannelWindow(mode, 'Music', html);
+}
+
+function showText(msg, mode = currentChannel().mode) {
+  const title = msg.title || 'Notes';
+  const html =
+    `<div class="text-panel"><textarea readonly>${escapeHtml(msg.content || '')}</textarea></div>`;
+  setChannelWindow(mode, title, html);
+}
+
+function showVideoWindow(msg, mode = currentChannel().mode) {
+  const title = msg.title || 'Video';
+  const url = msg.url || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+  const html =
+    `<div style="padding:0;background:#000">` +
+    `<video controls autoplay playsinline style="width:100%;max-height:70vh;display:block" src="${escapeHtml(url)}"></video>` +
+    `</div>`;
+  setChannelWindow(mode, title, html);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function disconnect() {
@@ -1067,6 +1347,7 @@ function disconnect() {
     ws.close();
   }
   ws = null;
+  setStatus('Off', '');
 }
 
 function updateMicUI() {
@@ -1083,13 +1364,18 @@ muteBtn.addEventListener('click', () => {
   updateMicUI();
 });
 
-pttBtn.addEventListener('click', () => isConnected ? disconnect() : connect());
+pttBtn.addEventListener('click', () => {
+  if (isConnected) disconnect();
+  else connect();
+});
 
-const sideBtn = document.querySelector('.side-btn.top');
+channelBtn.addEventListener('click', () => cycleChannel());
+channelDial.addEventListener('click', () => cycleChannel());
+
 const savedTheme = localStorage.getItem('wt-theme');
 if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 
-sideBtn.addEventListener('click', () => {
+themeBtn.addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme');
   if (current === 'light') {
     document.documentElement.removeAttribute('data-theme');
@@ -1099,6 +1385,7 @@ sideBtn.addEventListener('click', () => {
     localStorage.setItem('wt-theme', 'light');
   }
 });
+
 </script>
 </body>
 </html>
