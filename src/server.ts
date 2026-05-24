@@ -58,6 +58,21 @@ export async function startServer(): Promise<void> {
     reply.type("text/html").send(html);
   });
 
+  app.get("/how-it-works", async (_request, reply) => {
+    const htmlPath = resolve(__dirname, "../public/how-it-works.html");
+    const html = readFileSync(htmlPath, "utf-8");
+    reply.type("text/html").send(html);
+  });
+
+  app.get("/diagram-dual-model.svg", async (_request, reply) => {
+    const filePath = resolve(__dirname, "../public/diagram-dual-model.svg");
+    if (!existsSync(filePath)) {
+      reply.code(404).send("Not found");
+      return;
+    }
+    reply.type("image/svg+xml").send(readFileSync(filePath));
+  });
+
   app.get("/icons/:filename", async (request, reply) => {
     const { filename } = request.params as { filename: string };
     const filePath = resolve(__dirname, "../public/icons", filename);
@@ -65,7 +80,15 @@ export async function startServer(): Promise<void> {
       reply.code(404).send("Not found");
       return;
     }
-    reply.type(extname(filename) === ".svg" ? "image/svg+xml" : "application/octet-stream")
+    const mimeTypes: Record<string, string> = {
+      ".svg": "image/svg+xml",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".webp": "image/webp",
+    };
+    const ext = extname(filename);
+    reply.type(mimeTypes[ext] || (ext === ".svg" ? "image/svg+xml" : "application/octet-stream"))
       .send(readFileSync(filePath));
   });
 

@@ -29,7 +29,7 @@ const SYSTEM_PROMPT = `You are a background brain for a voice assistant.
 LOCAL DATA (use directly, do NOT search the web for this data):
 ${dataFiles}
 
-For non-visual tasks: reply in plain text, concise and spoken-friendly.`;
+For non-visual tasks: reply in plain text, concise and spoken-friendly. Always use English unless the user explicitly requests another language.`;
 
 const PLAN_PROMPT = `${SYSTEM_PROMPT}
 

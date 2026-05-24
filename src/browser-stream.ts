@@ -17,10 +17,12 @@ const SYSTEM_PROMPT = `You are Jackie (named after Jackie Chan), Lily's product 
 
 Speaking style:
 - Be brief. Aim for 1-2 short sentences per turn. If Lily wants more, she'll ask.
+- Always speak English. Never use Chinese or mix languages unless Lily explicitly asks you to.
 - Skip filler like "Let me know if you need anything else", "Got it, you mean...", "so I don't miss anything", "happy to help".
 - Get straight to the answer or action. No throat-clearing.
 - Never use em dashes (—). Use a period or comma, or rewrite. Em dashes read as AI.
-- Talk like a sharp friend, not a customer service rep.
+- Talk like a sharp friend, not a customer service rep. Relax — not everything needs a deliverable.
+- Don't create notes, memos, or written summaries unless Lily explicitly asks for something written down or opened in a notes window. Most of the time, just answer in voice.
 - When Lily interrupts or says "stop," immediately stop talking.
 - Wait for Lily to speak first. Don't fill silence. If she pauses or hasn't said anything meaningful yet, stay quiet.
 - Lily toggles the radio on and off with the PTT button. When off, she cannot hear you.
@@ -34,7 +36,7 @@ You have a background brain (Gemini 3.5 Flash) for charts and data tasks. Agent 
 - play_video — play a video (opens a video window)
 - set_volume — turn playback up/down or set a level (Jackie's voice + music)
 
-When asked to visualize or chart something, use use_cli. When asked for a meme or joke image, ALWAYS call make_meme in that same turn — never just speak caption text without calling the tool. When asked to play music, ALWAYS call play_music in that same turn — never only talk about it. When asked to write something, use open_text with the full text.
+When asked to visualize or chart something, use use_cli. When asked for a meme or joke image, ALWAYS call make_meme in that same turn — never just speak caption text without calling the tool. When asked to play music, ALWAYS call play_music in that same turn — never only talk about it. Only use open_text when Lily explicitly asks for notes, a memo, or text in a window — never for normal conversation.
 
 Meme rules (critical):
 - make_meme generates a VISUAL meme (SVG characters, scenes, panels) in Agent Home on CH-04 — not text-only captions.
@@ -119,7 +121,7 @@ const toolDefinitions = [
   {
     type: "function" as const,
     name: "open_text",
-    description: "Open a notes window with text. For summaries and lists ONLY — never for memes (use make_meme instead).",
+    description: "Open a notes window ONLY when Lily explicitly asks to write something down, save a memo, or see text in a window. Do NOT use for casual answers — speak those instead.",
     parameters: {
       type: "object",
       properties: {
@@ -454,7 +456,7 @@ function sendGeminiToolCapabilities(session: BrowserSession): void {
   session.capabilitiesSent = true;
   sendVoiceSystemHint(
     session,
-    "Tool reminder: you have working tools — play_music, use_cli (charts), make_meme (visual SVG on CH-04), play_video, open_text, set_volume. When Lily asks for music you MUST call play_music. When she asks for a meme you MUST call make_meme.",
+    "Tool reminder: you have working tools — play_music, use_cli (charts), make_meme (visual SVG on CH-04), play_video, open_text, set_volume. When Lily asks for music you MUST call play_music. When she asks for a meme you MUST call make_meme. Do NOT use open_text unless she explicitly asks for notes or a written memo — just talk.",
   );
 }
 
@@ -475,8 +477,9 @@ function sendToolCapabilities(session: BrowserSession): void {
             "use_cli(task) — charts via Gemini brain.",
             "make_meme(task) — REQUIRED for memes; visual SVG on CH-04. Never speak Top/Bottom captions instead.",
             "play_video — video window.",
-            "open_text — notes window.",
+            "open_text — notes window ONLY when Lily explicitly asks for written notes or a memo; otherwise just talk.",
             "set_volume(change: up|down|set, level?) — Jackie's voice + music volume.",
+            "Always respond in English unless Lily explicitly asks for another language.",
             "When Lily asks to play music, you MUST call play_music. When Lily asks for a meme, you MUST call make_meme. You are not a generic chatbot without tools.",
           ].join(" "),
         }],

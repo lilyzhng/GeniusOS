@@ -34,16 +34,16 @@ public/generated/         <- browser displays charts, memes, artifacts
 | Layer | Tech |
 |-------|------|
 | Voice UI | `public/index.html` (hold-to-talk button) |
-| Voice model (default) | Gemini Live API — `VOICE_BACKEND=gemini-live` |
-| Voice model (optional) | OpenAI Realtime (`gpt-realtime-2`) — `VOICE_BACKEND=openai` |
+| Voice model (default) | OpenAI Realtime (`gpt-realtime-2`) — `VOICE_BACKEND=openai` |
+| Voice model (optional) | Gemini Live API — `VOICE_BACKEND=gemini-live` |
 | Background brain | Gemini 3.5 Flash API (port 3336) |
 | Server | Fastify + WebSocket (port 3335) |
 
 ## Prerequisites
 
 - Node.js 18+
-- `GEMINI_API_KEY` in `.env` (voice + background brain)
-- `OPENAI_API_KEY` in `.env` (only when `VOICE_BACKEND=openai`)
+- `OPENAI_API_KEY` in `.env` (voice, default)
+- `GEMINI_API_KEY` in `.env` (background brain; also voice when `VOICE_BACKEND=gemini-live`)
 
 ## Setup
 
@@ -57,9 +57,9 @@ npm run verify-gemini   # smoke test background Gemini API
 Optional `.env` settings:
 
 ```
-VOICE_BACKEND=gemini-live  # gemini-live (default) | openai
-GEMINI_LIVE_MODEL=gemini-2.5-flash-native-audio-preview-12-2025
-OPENAI_API_KEY=            # only for VOICE_BACKEND=openai
+VOICE_BACKEND=openai  # openai (default) | gemini-live
+GEMINI_API_KEY=       # background brain; also voice when VOICE_BACKEND=gemini-live
+OPENAI_API_KEY=       # voice (default)
 PORT=3335                  # voice server port (default)
 BRAIN_BACKEND=gemini       # default
 BROWSER_AUTH_TOKEN=        # leave empty for local dev
