@@ -340,16 +340,19 @@ function handleUserTranscript(session: BrowserSession, text: string): void {
   }
 }
 
-function handleAssistantTranscript(session: BrowserSession, text: string): void {
+function handleAssistantTranscript(session: BrowserSession, text: string, opts?: { partial?: boolean }): void {
   if (!text.trim()) return;
-  console.log(`[voice] Jackie: ${text.slice(0, 100)}`);
-  session.transcript.push(`**Jackie:** ${text}`);
-  send(session, { type: "transcript", role: "assistant", text });
-  if (matchesJackieSpokeMemeInsteadOfTool(text) && !recentMemeActivity(session)) {
-    const task = buildMemeTaskFromJackieCaption(session.lastUserText, text);
-    console.log("[browser] Jackie spoke meme captions without tool — auto make_meme");
-    autoMakeMeme(session, text, task);
+  const partial = opts?.partial ?? false;
+  if (!partial) {
+    console.log(`[voice] Jackie: ${text.slice(0, 100)}`);
+    session.transcript.push(`**Jackie:** ${text}`);
+    if (matchesJackieSpokeMemeInsteadOfTool(text) && !recentMemeActivity(session)) {
+      const task = buildMemeTaskFromJackieCaption(session.lastUserText, text);
+      console.log("[browser] Jackie spoke meme captions without tool — auto make_meme");
+      autoMakeMeme(session, text, task);
+    }
   }
+  send(session, { type: "transcript", role: "assistant", text, partial });
 }
 
 function processToolCall(
@@ -410,9 +413,10 @@ async function connectGeminiLive(session: BrowserSession, context: string | null
           send(session, { type: "audio", data: base64 });
         },
         onInputTranscript: (text) => handleUserTranscript(session, text),
+        onOutputTranscriptPartial: (text) => handleAssistantTranscript(session, text, { partial: true }),
         onOutputTranscript: (text) => {
           session.isSpeaking = false;
-          handleAssistantTranscript(session, text);
+          handleAssistantTranscript(session, text, { partial: false });
           send(session, { type: "status", state: "listening" });
         },
         onToolCall: (name, args, id) => {

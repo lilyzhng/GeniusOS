@@ -12,11 +12,27 @@ export interface GeminiLiveCallbacks {
   onReady: () => void;
   onAudioDelta: (base64Pcm: string) => void;
   onInputTranscript: (text: string) => void;
+  onOutputTranscriptPartial?: (text: string) => void;
   onOutputTranscript: (text: string) => void;
   onToolCall: (name: string, args: Record<string, string>, id: string) => void;
   onSpeakingStart: () => void;
   onSpeakingEnd: () => void;
   onError: (message: string) => void;
+}
+
+interface TranscriptBuffers {
+  input: string;
+  output: string;
+}
+
+function appendTranscriptChunk(buffer: string, chunk: string): string {
+  if (!chunk) return buffer;
+  if (!buffer) return chunk;
+  // Cumulative partial (new text extends prior) — replace, don't double-append.
+  if (chunk.startsWith(buffer)) return chunk;
+  // Delta partial — append with spacing when needed.
+  const needsSpace = buffer && !/\s$/.test(buffer) && !/^[.,!?;:]/.test(chunk);
+  return buffer + (needsSpace ? " " : "") + chunk;
 }
 
 function openAiToolToGeminiDecl(tool: {
@@ -50,7 +66,45 @@ function extractAudioFromMessage(message: LiveServerMessage): string | null {
   return data ?? null;
 }
 
-function handleServerMessage(message: LiveServerMessage, cb: GeminiLiveCallbacks): void {
+function flushTranscript(
+  kind: "input" | "output",
+  transcripts: TranscriptBuffers,
+  cb: GeminiLiveCallbacks,
+  opts?: { partial?: boolean; final?: boolean },
+): void {
+  const text = transcripts[kind].trim();
+  if (!text) return;
+  if (kind === "input") {
+    cb.onInputTranscript(text);
+    transcripts[kind] = "";
+    return;
+  }
+  if (opts?.partial) cb.onOutputTranscriptPartial?.(text);
+  if (opts?.final) {
+    cb.onOutputTranscript(text);
+    transcripts[kind] = "";
+  }
+}
+
+function handleTranscription(
+  kind: "input" | "output",
+  transcription: { text?: string; finished?: boolean } | undefined,
+  transcripts: TranscriptBuffers,
+  cb: GeminiLiveCallbacks,
+): void {
+  if (!transcription?.text) return;
+  transcripts[kind] = appendTranscriptChunk(transcripts[kind], transcription.text);
+  if (kind === "output") {
+    flushTranscript("output", transcripts, cb, { partial: true });
+    return;
+  }
+}
+
+function handleServerMessage(
+  message: LiveServerMessage,
+  cb: GeminiLiveCallbacks,
+  transcripts: TranscriptBuffers,
+): void {
   if (message.setupComplete) {
     console.log("[gemini-live] Setup complete");
     cb.onReady();
@@ -60,14 +114,15 @@ function handleServerMessage(message: LiveServerMessage, cb: GeminiLiveCallbacks
   const content = message.serverContent;
   if (content?.interrupted) {
     cb.onSpeakingEnd();
+    flushTranscript("output", transcripts, cb, { final: true });
   }
 
   if (content?.inputTranscription?.text?.trim()) {
-    cb.onInputTranscript(content.inputTranscription.text.trim());
+    handleTranscription("input", content.inputTranscription, transcripts, cb);
   }
 
   if (content?.outputTranscription?.text?.trim()) {
-    cb.onOutputTranscript(content.outputTranscription.text.trim());
+    handleTranscription("output", content.outputTranscription, transcripts, cb);
   }
 
   const audio = extractAudioFromMessage(message);
@@ -76,8 +131,13 @@ function handleServerMessage(message: LiveServerMessage, cb: GeminiLiveCallbacks
     cb.onAudioDelta(audio);
   }
 
-  if (content?.turnComplete || content?.generationComplete) {
+  if (content?.generationComplete) {
     cb.onSpeakingEnd();
+    flushTranscript("output", transcripts, cb, { final: true });
+  }
+
+  if (content?.turnComplete) {
+    flushTranscript("input", transcripts, cb);
   }
 
   const calls = message.toolCall?.functionCalls;
@@ -107,6 +167,7 @@ export async function createGeminiLiveVoice(
 
   let liveSession: Session | null = null;
   let currentInstructions = instructions;
+  const transcripts: TranscriptBuffers = { input: "", output: "" };
 
   liveSession = await ai.live.connect({
     model,
@@ -120,7 +181,7 @@ export async function createGeminiLiveVoice(
     callbacks: {
       onopen: () => console.log("[gemini-live] Connected"),
       onmessage: (message: LiveServerMessage) => {
-        handleServerMessage(message, callbacks);
+        handleServerMessage(message, callbacks, transcripts);
       },
       onerror: (event: ErrorEvent) => {
         const msg = event.message || "Gemini Live WebSocket error";

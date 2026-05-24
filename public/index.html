@@ -1470,10 +1470,24 @@ function startLiveWaveform() {
   step();
 }
 
-function addTranscript(role, text) {
+function addTranscript(role, text, partial = false) {
+  const last = transcriptEl.lastElementChild;
+  if (
+    last?.classList.contains('msg')
+    && last.classList.contains(role)
+    && last.dataset.streaming === '1'
+  ) {
+    last.querySelector('.text').textContent = text;
+    if (!partial) delete last.dataset.streaming;
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    return;
+  }
+
   const div = document.createElement('div');
   div.className = `msg ${role}`;
-  div.innerHTML = `<div class="role">${role === 'user' ? 'Lily' : 'Jackie'}</div><div class="text">${text}</div>`;
+  if (partial) div.dataset.streaming = '1';
+  div.innerHTML = `<div class="role">${role === 'user' ? 'Lily' : 'Jackie'}</div><div class="text"></div>`;
+  div.querySelector('.text').textContent = text;
   transcriptEl.appendChild(div);
   transcriptEl.scrollTop = transcriptEl.scrollHeight;
 }
@@ -1747,7 +1761,7 @@ function connect() {
         schedulePlayback(msg.data);
         break;
       case 'transcript':
-        addTranscript(msg.role, msg.text);
+        addTranscript(msg.role, msg.text, msg.partial === true);
         break;
       case 'tool_call':
         addToolCall(msg.name, msg.args);
