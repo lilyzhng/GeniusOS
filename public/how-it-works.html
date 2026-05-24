@@ -970,10 +970,13 @@ h2 {
           .arch-node-fe { stroke: #b8ccf5; }
           .arch-node-bg { stroke: #a8d4bc; }
           .arch-node-title { font-family: 'Syne', system-ui, sans-serif; font-size: 14px; font-weight: 700; fill: #0a0f1c; text-anchor: middle; }
+          .arch-node-title-sm { font-family: 'Syne', system-ui, sans-serif; font-size: 11px; font-weight: 700; fill: #0a0f1c; text-anchor: middle; }
           .arch-node-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; fill: #848ba8; text-anchor: middle; }
           .arch-label-text { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: #4a5178; text-transform: uppercase; letter-spacing: 0.06em; }
           .arch-realtime-border { fill: none; stroke: #c0c6d8; stroke-width: 1.4; stroke-dasharray: 6,4; }
           .arch-realtime-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: #848ba8; text-transform: uppercase; letter-spacing: 0.08em; }
+          .arch-bg-zone { fill: none; stroke: #a8d4bc; stroke-width: 1.4; stroke-dasharray: 6,4; }
+          .arch-bg-zone-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; fill: #4a8c6a; text-transform: uppercase; letter-spacing: 0.08em; text-anchor: middle; }
         </style>
         <rect x="55" y="218" width="340" height="228" rx="14" class="arch-realtime-border"/>
         <text x="225" y="440" text-anchor="middle" class="arch-realtime-label">real-time</text>
@@ -981,14 +984,15 @@ h2 {
         <path d="M 218 254 L 230 264 L 218 274" class="arch-arrowhead-blue"/>
         <path d="M 303 292 V 368 Q 303 388 275 388 H 225" class="arch-arrow-path arch-arrow-blue"/>
         <path d="M 235 378 L 223 388 L 235 398" class="arch-arrowhead-blue"/>
-        <path d="M 303 228 V 143 Q 303 118 328 118 H 440" class="arch-arrow-path arch-arrow-green"/>
-        <path d="M 428 108 L 440 118 L 428 128" class="arch-arrowhead-green"/>
-        <path d="M 520 163 V 256 Q 520 273 495 273 H 383" class="arch-arrow-path arch-arrow-green"/>
-        <path d="M 395 263 L 383 273 L 395 283" class="arch-arrowhead-green"/>
-        <path d="M 520 83 V 43 Q 520 23 545 23 H 630 Q 650 23 650 43 V 103 Q 650 118 630 118 H 600" class="arch-arrow-path arch-arrow-green"/>
-        <path d="M 612 108 L 600 118 L 612 128" class="arch-arrowhead-green"/>
+        <!-- Green arrows: anchored to dashed zone edges (bg brain + real-time) -->
+        <path d="M 303 218 V 143 Q 303 118 328 118 H 386" class="arch-arrow-path arch-arrow-green"/>
+        <path d="M 374 106 L 386 118 L 374 130" class="arch-arrowhead-green"/>
+        <path d="M 486 186 V 260 Q 486 268 461 268 H 395" class="arch-arrow-path arch-arrow-green"/>
+        <path d="M 407 256 L 395 268 L 407 280" class="arch-arrowhead-green"/>
+        <path d="M 486 88 V 63 Q 486 43 511 43 H 586 Q 606 43 606 63 V 123 Q 606 138 586 138" class="arch-arrow-path arch-arrow-green"/>
+        <path d="M 598 126 L 586 138 L 598 150" class="arch-arrowhead-green"/>
         <path id="wt-rt-loop" d="M 150 358 V 298 Q 150 264 180 264 H 228 L 303 264 V 292 V 368 Q 303 388 275 388 H 225 L 150 388 V 358" class="arch-motion-route"/>
-        <path id="wt-bg-loop" d="M 303 228 V 143 Q 303 118 328 118 H 440 L 480 118 H 520 V 83 V 43 Q 520 23 545 23 H 630 Q 650 23 650 43 V 103 Q 650 118 630 118 H 600 L 555 118 H 520 V 163 V 256 Q 520 273 495 273 H 383 L 303 273 V 228" class="arch-motion-route"/>
+        <path id="wt-bg-loop" d="M 303 218 V 143 Q 303 118 328 118 H 386 L 486 118 V 88 V 63 Q 486 43 511 43 H 586 Q 606 43 606 63 V 123 Q 606 138 586 138 L 486 138 V 186 V 260 Q 486 268 461 268 H 395 L 303 268 V 218" class="arch-motion-route"/>
         <g>
           <rect class="arch-spark-blue" x="-12" y="-3" width="24" height="6" rx="3"/>
           <animateMotion dur="1.6s" repeatCount="indefinite" rotate="auto">
@@ -1015,16 +1019,22 @@ h2 {
           <tspan x="303" dy="0">Gemini Live</tspan>
           <tspan x="303" dy="11">OpenAI Realtime</tspan>
         </text>
-        <rect x="448" y="88" width="145" height="64" rx="10" class="arch-node-box arch-node-bg"/>
-        <text x="520" y="114" class="arch-node-title">Background brain</text>
-        <text x="520" y="132" class="arch-node-sub">Gemini 3.5 Flash</text>
-        <text x="375" y="110" class="arch-label-text" text-anchor="middle">task</text>
-        <text x="450" y="266" class="arch-label-text" text-anchor="middle">result</text>
-        <text x="665" y="40" class="arch-label-text">tool calls</text>
-        <text x="665" y="56" class="arch-label-text">search</text>
-        <text x="665" y="72" class="arch-label-text" style="text-transform: none; font-style: italic;">generative UI</text>
+        <!-- Background brain zone (replaces single Claude Code / backend box) -->
+        <rect x="386" y="88" width="200" height="98" rx="14" class="arch-bg-zone"/>
+        <text x="486" y="104" class="arch-bg-zone-label">background brain · parallel</text>
+        <rect x="394" y="116" width="88" height="58" rx="10" class="arch-node-box arch-node-bg"/>
+        <text x="438" y="138" class="arch-node-title-sm">Agent 1</text>
+        <text x="438" y="154" class="arch-node-sub">Gemini 3.5</text>
+        <rect x="490" y="116" width="88" height="58" rx="10" class="arch-node-box arch-node-bg"/>
+        <text x="534" y="138" class="arch-node-title-sm">Agent 2</text>
+        <text x="534" y="154" class="arch-node-sub">Gemini 3.5</text>
+        <text x="360" y="112" class="arch-label-text" text-anchor="middle">task</text>
+        <text x="420" y="278" class="arch-label-text" text-anchor="middle">result</text>
+        <text x="621" y="60" class="arch-label-text">tool calls</text>
+        <text x="621" y="76" class="arch-label-text">search</text>
+        <text x="621" y="92" class="arch-label-text" style="text-transform: none; font-style: italic;">generative UI</text>
       </svg>
-      <p class="arch-caption">The front-end model handles talking and interacting with the user, while the back-end model handles tool calls, search, and generative UI.</p>
+      <p class="arch-caption">The front-end model handles talking and interacting with the user, while background brains run tool calls, search, and generative UI in parallel.</p>
     </div>
   </div>
 </section>

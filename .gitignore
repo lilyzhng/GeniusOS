@@ -7,3 +7,4 @@ dist
 *.log
 public/generated/
 .DS_Store
+.vercel

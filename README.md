@@ -120,6 +120,18 @@ scripts/
   test-tool-audio.ts    audio tool test
 ```
 
+## Deploy (Vercel)
+
+Static site from `public/` — how-it-works deck, diagrams, assets. Auto-deploys on push to `main` via [GitHub integration](https://github.com/lilyzhng/walkie-talkie).
+
+| URL | What |
+|-----|------|
+| https://lily-walkie-talkie.vercel.app | How it works (production home) |
+| https://lily-walkie-talkie.vercel.app/index.html | Voice demo UI (static only; needs local server for voice) |
+| https://vercel.com/lily-zhangs-projects/walkie-talkie | Vercel project dashboard |
+
+The voice WebSocket server and background brain still run locally (or on a long-lived host) — Vercel serves the static UI/docs only.
+
 ## Future: Managed Agent (Antigravity)
 
 The background brain could swap from direct Gemini API calls to an Antigravity managed agent (`BRAIN_BACKEND=antigravity`). This would give the agent a persistent remote sandbox with state across commands, turning the background into a true "Agent Home". The voice shell stays the same, only the execution backend changes.
