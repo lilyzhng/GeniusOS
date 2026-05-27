@@ -594,6 +594,40 @@ h2 {
   border: 0;
 }
 
+.video-thumb {
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.video-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 68px;
+  height: 68px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 28px;
+  padding-left: 4px;
+  transition: background 0.2s;
+}
+
+.video-thumb:hover .video-play-btn {
+  background: rgba(255, 0, 0, 0.85);
+}
+
 /* Pipeline - horizontal flow, wraps naturally */
 .pipeline {
   display: flex;
@@ -779,18 +813,12 @@ h2 {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  margin-left: clamp(-8px, -1vw, 0px);
-  border-radius: 22px;
-  overflow: hidden;
-  line-height: 0;
+  justify-content: center;
 }
 
-.intro-device img {
-  width: clamp(210px, 26vw, 320px);
-  height: auto;
-  max-height: min(78vh, 580px);
-  object-fit: contain;
+.intro-device canvas {
+  width: clamp(220px, 24vw, 320px);
+  height: clamp(220px, 24vw, 320px);
   display: block;
 }
 
@@ -805,9 +833,9 @@ h2 {
     align-self: center;
   }
 
-  .intro-device img {
+  .intro-device canvas {
     width: clamp(160px, 42vw, 220px);
-    max-height: min(42vh, 360px);
+    height: clamp(160px, 42vw, 220px);
   }
 }
 
@@ -873,6 +901,71 @@ h2 {
   .video-frame { max-height: min(40vh, 280px); }
 }
 
+/* Latency / problem slide */
+.slide-latency .slide-content {
+  max-width: min(98vw, 1120px);
+  gap: clamp(6px, 1vh, 10px);
+}
+
+.problem-split {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 32px);
+  min-height: 0;
+  width: 100%;
+}
+
+.problem-diagram {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.problem-diagram svg {
+  width: clamp(240px, 30vw, 340px);
+  max-height: min(72vh, 500px);
+  height: auto;
+  display: block;
+}
+
+.problem-meme {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.problem-meme {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.problem-meme img {
+  width: 100%;
+  max-width: 640px;
+  max-height: min(62vh, 480px);
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.meme-caption {
+  font-family: var(--font-body);
+  font-size: var(--small-size);
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+@media (max-width: 820px) {
+  .problem-split {
+    flex-direction: column;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -882,13 +975,14 @@ h2 {
   .reveal { transform: none; }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
 <div class="progress-bar" id="progress"></div>
 <nav class="nav-dots" id="nav-dots" aria-label="Slide navigation"></nav>
-<div class="top-bar"><a class="back-link" href="index.html">← Walkie-Talkie</a></div>
-<div class="slide-num" id="slide-num">1 / 5</div>
+<div class="top-bar"></div>
+<div class="slide-num" id="slide-num">1 / 6</div>
 <div class="keyboard-hint">← → or scroll</div>
 
 <!-- Slide 1: What it is -->
@@ -896,20 +990,17 @@ h2 {
   <div class="slide-content">
     <div class="intro-copy">
       <div class="accent-line reveal"></div>
-      <p class="eyebrow reveal">DeepMind I/O Hackathon · 2026</p>
+      <p class="eyebrow reveal">OpenAI Voice Hack Night · 2026</p>
       <h1 class="reveal">Walkie Talkie</h1>
-      <div class="subtitle-row reveal">
-        <p class="subtitle">A real-time thinking partner</p>
-        <span class="subtitle-tag">10x flowrate</span>
-      </div>
-      <p class="lede reveal">Flows with your mind. You don't have to sit in front of a computer. Go out, touch grass, and get work done just by talking.</p>
+      <p class="subtitle reveal">Real-time voice agent got strong hands.</p>
       <div class="badges reveal">
+        <span class="badge badge-neon">Handy and brainy</span>
         <span class="badge badge-neon">Mix of experts</span>
         <span class="badge badge-blue">Dual-model</span>
       </div>
     </div>
     <div class="intro-device reveal">
-      <img src="icons/walkie-talkie-hero.jpg" alt="Walkie-Talkie device showing a live conversation with Jackie">
+      <canvas id="orb-canvas" width="800" height="800"></canvas>
     </div>
   </div>
 </section>
@@ -930,8 +1021,8 @@ h2 {
         <text x="195" y="176" text-anchor="middle" class="venn-item">Simultaneous listen + speak</text>
         <text x="195" y="198" text-anchor="middle" class="venn-item">Weak tool calling</text>
         <text x="195" y="252" text-anchor="middle" class="venn-example">
-          <tspan x="195" dy="0">Gemini Live,</tspan>
-          <tspan x="195" dy="13">OpenAI Realtime</tspan>
+          <tspan x="195" dy="0">OpenAI Realtime,</tspan>
+          <tspan x="195" dy="13">Gemini Live</tspan>
         </text>
         <text x="665" y="118" text-anchor="middle" class="venn-title">Turn-Based</text>
         <text x="665" y="154" text-anchor="middle" class="venn-item">Task completion</text>
@@ -948,7 +1039,104 @@ h2 {
   </div>
 </section>
 
-<!-- Slide 3: Dual model -->
+<!-- Slide 3: The problem -->
+<section class="slide slide-compact-head slide-latency" data-title="The problem">
+  <div class="slide-content">
+    <div class="flow-header reveal">
+      <p class="eyebrow">The problem</p>
+      <h2>3.7 seconds of dead air. Every single turn.</h2>
+    </div>
+    <div class="problem-split reveal">
+      <div class="problem-diagram">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 420" role="img" aria-label="Traditional sequential voice pipeline">
+        <style>
+          .lat-box { fill: #ffffff; stroke: #d0d5e6; stroke-width: 1.4; rx: 10; }
+          .lat-box-red { fill: #fff5f5; stroke: #e57373; stroke-width: 1.4; rx: 10; }
+          .lat-box-green { fill: #f0faf4; stroke: #66bb6a; stroke-width: 1.4; rx: 10; }
+          .lat-box-neon { fill: #f4ffe0; stroke: #a0cc00; stroke-width: 1.4; rx: 10; }
+          .lat-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; fill: #0a0f1c; }
+          .lat-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; fill: #848ba8; text-transform: uppercase; letter-spacing: 0.08em; }
+          .lat-text { font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; fill: #1e2640; }
+          .lat-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; fill: #848ba8; }
+          .lat-time-red { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; fill: #c62828; }
+          .lat-time-green { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; fill: #2e7d32; }
+          .lat-arrow { fill: none; stroke: #d0d5e6; stroke-width: 2; stroke-linecap: round; }
+          .lat-arrow-head { fill: none; stroke: #d0d5e6; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+          .lat-zone { fill: none; stroke: #d0d5e6; stroke-width: 1.4; stroke-dasharray: 6,4; rx: 14; }
+          .lat-zone-green { fill: none; stroke: #66bb6a; stroke-width: 1.4; stroke-dasharray: 6,4; rx: 14; }
+          .lat-zone-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; fill: #848ba8; text-transform: uppercase; letter-spacing: 0.08em; }
+          .lat-zone-label-green { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; fill: #4a8c6a; text-transform: uppercase; letter-spacing: 0.08em; }
+          .lat-dead-air { fill: #c62828; fill-opacity: 0.06; stroke: #e57373; stroke-width: 1.2; stroke-dasharray: 4,3; rx: 8; }
+          .lat-caption { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; fill: #4a5178; }
+          .lat-divider { stroke: #d0d5e6; stroke-width: 1; stroke-dasharray: 3,3; }
+          .lat-vs { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; fill: #848ba8; }
+          .lat-badge { rx: 6; }
+          .lat-badge-red { fill: #ffebee; }
+          .lat-badge-green { fill: #e8f5e9; }
+          .lat-badge-text-red { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; fill: #c62828; }
+          .lat-badge-text-green { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; fill: #2e7d32; }
+          .lat-spark-red { fill: #e57373; opacity: 0.5; }
+          .lat-spark-green { fill: #66bb6a; opacity: 0.5; }
+          .lat-motion-route { fill: none; opacity: 0; pointer-events: none; }
+        </style>
+
+        <!-- Left: Traditional pipeline -->
+        <text x="160" y="28" text-anchor="middle" class="lat-title">Traditional pipeline</text>
+        <rect x="105" y="36" width="110" height="18" class="lat-badge lat-badge-red"/>
+        <text x="160" y="49" text-anchor="middle" class="lat-badge-text-red">~3.7s dead air</text>
+
+        <!-- Dead air zone -->
+        <rect x="25" y="64" width="270" height="340" class="lat-dead-air"/>
+        <text x="160" y="82" text-anchor="middle" class="lat-zone-label">sequential — user hears silence</text>
+
+        <!-- STT -->
+        <rect x="70" y="94" width="180" height="48" class="lat-box"/>
+        <text x="160" y="114" text-anchor="middle" class="lat-label">speech-to-text</text>
+        <text x="160" y="131" text-anchor="middle" class="lat-time">~500ms</text>
+
+        <!-- Arrow -->
+        <line x1="160" y1="142" x2="160" y2="160" class="lat-arrow"/>
+        <polyline points="155,155 160,162 165,155" class="lat-arrow-head"/>
+
+        <!-- LLM -->
+        <rect x="70" y="164" width="180" height="48" class="lat-box"/>
+        <text x="160" y="184" text-anchor="middle" class="lat-label">llm reasoning</text>
+        <text x="160" y="201" text-anchor="middle" class="lat-time">~1500ms</text>
+
+        <!-- Arrow -->
+        <line x1="160" y1="212" x2="160" y2="230" class="lat-arrow"/>
+        <polyline points="155,225 160,232 165,225" class="lat-arrow-head"/>
+
+        <!-- Tool execution -->
+        <rect x="70" y="234" width="180" height="48" class="lat-box"/>
+        <text x="160" y="254" text-anchor="middle" class="lat-label">tool execution</text>
+        <text x="160" y="271" text-anchor="middle" class="lat-time">~1200ms</text>
+
+        <!-- Arrow -->
+        <line x1="160" y1="282" x2="160" y2="300" class="lat-arrow"/>
+        <polyline points="155,295 160,302 165,295" class="lat-arrow-head"/>
+
+        <!-- TTS -->
+        <rect x="70" y="304" width="180" height="48" class="lat-box"/>
+        <text x="160" y="324" text-anchor="middle" class="lat-label">text-to-speech</text>
+        <text x="160" y="341" text-anchor="middle" class="lat-time">~500ms</text>
+
+        <!-- Response -->
+        <line x1="160" y1="352" x2="160" y2="370" class="lat-arrow"/>
+        <polyline points="155,365 160,372 165,365" class="lat-arrow-head"/>
+        <rect x="70" y="374" width="180" height="28" class="lat-box-red"/>
+        <text x="160" y="393" text-anchor="middle" class="lat-text" style="fill: #c62828; font-weight: 600;">User finally hears voice</text>
+      </svg>
+      </div>
+      <div class="problem-meme">
+        <img src="icons/meme-dead-air.png" alt="Customer on hold while agents whisper to each other for answers">
+        <p class="meme-caption">This is your customer support voice agent today.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 4: Dual model -->
 <section class="slide slide-compact-head slide-dual-model" data-title="Dual model">
   <div class="slide-content">
     <div class="flow-header reveal">
@@ -956,7 +1144,7 @@ h2 {
       <h2>Two models. One conversation.</h2>
     </div>
     <div class="arch-diagram reveal">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Walkie-Talkie dual-model architecture">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -40 800 500" role="img" aria-label="Walkie-Talkie dual-model architecture">
         <style>
           .arch-arrow-path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
           .arch-arrow-blue { stroke: rgba(0, 85, 255, 0.35); }
@@ -985,14 +1173,14 @@ h2 {
         <path d="M 303 292 V 368 Q 303 388 275 388 H 225" class="arch-arrow-path arch-arrow-blue"/>
         <path d="M 235 378 L 223 388 L 235 398" class="arch-arrowhead-blue"/>
         <!-- Green arrows: anchored to dashed zone edges (bg brain + real-time) -->
-        <path d="M 303 218 V 143 Q 303 118 328 118 H 386" class="arch-arrow-path arch-arrow-green"/>
-        <path d="M 374 106 L 386 118 L 374 130" class="arch-arrowhead-green"/>
-        <path d="M 486 186 V 260 Q 486 268 461 268 H 395" class="arch-arrow-path arch-arrow-green"/>
-        <path d="M 407 256 L 395 268 L 407 280" class="arch-arrowhead-green"/>
-        <path d="M 486 88 V 63 Q 486 43 511 43 H 586 Q 606 43 606 63 V 123 Q 606 138 586 138" class="arch-arrow-path arch-arrow-green"/>
-        <path d="M 598 126 L 586 138 L 598 150" class="arch-arrowhead-green"/>
+        <path d="M 303 218 V 123 Q 303 98 328 98 H 416" class="arch-arrow-path arch-arrow-green"/>
+        <path d="M 404 86 L 416 98 L 404 110" class="arch-arrowhead-green"/>
+        <path d="M 516 176 V 250 Q 516 260 491 260 H 395" class="arch-arrow-path arch-arrow-green"/>
+        <path d="M 407 248 L 395 260 L 407 272" class="arch-arrowhead-green"/>
+        <path d="M 516 64 V 39 Q 516 19 541 19 H 616 Q 636 19 636 39 V 103 Q 636 118 616 118" class="arch-arrow-path arch-arrow-green"/>
+        <path d="M 628 106 L 616 118 L 628 130" class="arch-arrowhead-green"/>
         <path id="wt-rt-loop" d="M 150 358 V 298 Q 150 264 180 264 H 228 L 303 264 V 292 V 368 Q 303 388 275 388 H 225 L 150 388 V 358" class="arch-motion-route"/>
-        <path id="wt-bg-loop" d="M 303 218 V 143 Q 303 118 328 118 H 386 L 486 118 V 88 V 63 Q 486 43 511 43 H 586 Q 606 43 606 63 V 123 Q 606 138 586 138 L 486 138 V 186 V 260 Q 486 268 461 268 H 395 L 303 268 V 218" class="arch-motion-route"/>
+        <path id="wt-bg-loop" d="M 303 218 V 123 Q 303 98 328 98 H 416 L 516 98 V 64 V 39 Q 516 19 541 19 H 616 Q 636 19 636 39 V 103 Q 636 118 616 118 L 516 118 V 176 V 250 Q 516 260 491 260 H 395 L 303 260 V 218" class="arch-motion-route"/>
         <g>
           <rect class="arch-spark-blue" x="-12" y="-3" width="24" height="6" rx="3"/>
           <animateMotion dur="1.6s" repeatCount="indefinite" rotate="auto">
@@ -1015,31 +1203,33 @@ h2 {
         <text x="150" y="393" class="arch-node-title">user</text>
         <rect x="230" y="232" width="145" height="72" rx="10" class="arch-node-box arch-node-fe"/>
         <text x="303" y="256" class="arch-node-title">Front-end model</text>
-        <text x="303" y="274" class="arch-node-sub">
-          <tspan x="303" dy="0">Gemini Live</tspan>
-          <tspan x="303" dy="11">OpenAI Realtime</tspan>
-        </text>
-        <!-- Background brain zone (replaces single Claude Code / backend box) -->
-        <rect x="386" y="88" width="200" height="98" rx="14" class="arch-bg-zone"/>
-        <text x="486" y="104" class="arch-bg-zone-label">background brain · parallel</text>
-        <rect x="394" y="116" width="88" height="58" rx="10" class="arch-node-box arch-node-bg"/>
-        <text x="438" y="138" class="arch-node-title-sm">Agent 1</text>
-        <text x="438" y="154" class="arch-node-sub">Gemini 3.5</text>
-        <rect x="490" y="116" width="88" height="58" rx="10" class="arch-node-box arch-node-bg"/>
-        <text x="534" y="138" class="arch-node-title-sm">Agent 2</text>
-        <text x="534" y="154" class="arch-node-sub">Gemini 3.5</text>
-        <text x="360" y="112" class="arch-label-text" text-anchor="middle">task</text>
-        <text x="420" y="278" class="arch-label-text" text-anchor="middle">result</text>
-        <text x="621" y="60" class="arch-label-text">tool calls</text>
-        <text x="621" y="76" class="arch-label-text">search</text>
-        <text x="621" y="92" class="arch-label-text" style="text-transform: none; font-style: italic;">generative UI</text>
+        <text x="303" y="278" class="arch-node-sub">gpt-realtime-2</text>
+        <!-- Background brain zone (+30x, -20y from original) -->
+        <rect x="416" y="64" width="200" height="112" rx="14" class="arch-bg-zone"/>
+        <text x="516" y="78" class="arch-bg-zone-label">background brain · parallel</text>
+        <rect x="424" y="84" width="88" height="38" rx="10" class="arch-node-box arch-node-bg"/>
+        <text x="468" y="99" class="arch-node-title-sm">Agent 1</text>
+        <text x="468" y="112" class="arch-node-sub">Tool execution</text>
+        <rect x="520" y="84" width="88" height="38" rx="10" class="arch-node-box arch-node-bg"/>
+        <text x="564" y="99" class="arch-node-title-sm">Agent 2</text>
+        <text x="564" y="112" class="arch-node-sub">Search + RAG</text>
+        <rect x="424" y="128" width="88" height="38" rx="10" class="arch-node-box arch-node-bg"/>
+        <text x="468" y="143" class="arch-node-title-sm">Agent 3</text>
+        <text x="468" y="156" class="arch-node-sub">Generative UI</text>
+        <rect x="520" y="128" width="88" height="38" rx="10" class="arch-node-box arch-node-bg"/>
+        <text x="564" y="143" class="arch-node-title-sm">Agent 4</text>
+        <text x="564" y="156" class="arch-node-sub">Image gen</text>
+        <text x="380" y="98" class="arch-label-text" text-anchor="middle">task</text>
+        <text x="440" y="258" class="arch-label-text" text-anchor="middle">result</text>
+        <text x="637" y="40" class="arch-label-text">all powered</text>
+        <text x="637" y="54" class="arch-label-text">by Codex</text>
       </svg>
       <p class="arch-caption">The front-end model handles talking and interacting with the user, while background brains run tool calls, search, and generative UI in parallel.</p>
     </div>
   </div>
 </section>
 
-<!-- Slide 4: Example + demo -->
+<!-- Slide 5: Example + demo -->
 <section class="slide slide-compact-head slide-example-split" data-title="Example">
   <div class="slide-content">
     <div class="flow-header reveal">
@@ -1081,28 +1271,31 @@ h2 {
         </div>
       </div>
       <div class="example-video">
-        <div class="video-frame card">
-          <iframe
-            src="https://www.youtube-nocookie.com/embed/nkG2ME7mrAc?rel=0&modestbranding=1"
-            title="walkie-talkie demo"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-          ></iframe>
-        </div>
+        <a class="video-frame card video-thumb" href="https://www.youtube.com/watch?v=Yyoj5Trym5M" target="_blank" rel="noopener">
+          <img src="https://img.youtube.com/vi/Yyoj5Trym5M/maxresdefault.jpg" alt="Walkie-Talkie demo video">
+          <div class="video-play-btn">&#9654;</div>
+        </a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Slide 5: Close -->
-<section class="slide" data-title="Try it">
+<!-- Slide 6: Close (mirrors Slide 1) -->
+<section class="slide slide-intro" data-title="Try it">
   <div class="slide-content">
-    <p class="eyebrow reveal">Go</p>
-    <h2 class="reveal">Think out loud, let agents flow with your mind.</h2>
-    <div class="cta-row reveal">
-      <a class="cta cta-primary" href="index.html">Launch Walkie-Talkie</a>
-      <a class="cta cta-secondary" href="https://lilyzhng.github.io/posts/interaction-model/" target="_blank" rel="noopener">Read the write-up</a>
-      <a class="cta cta-secondary" href="https://www.youtube.com/watch?v=nkG2ME7mrAc" target="_blank" rel="noopener">Full demo</a>
+    <div class="intro-copy">
+      <div class="accent-line reveal"></div>
+      <p class="eyebrow reveal">OpenAI Voice Hack Night · 2026</p>
+      <h1 class="reveal">Walkie Talkie</h1>
+      <p class="subtitle reveal">Real-time voice agent got strong hands.</p>
+      <div class="cta-row reveal">
+        <a class="cta cta-primary" href="index.html">Launch Walkie-Talkie</a>
+        <a class="cta cta-secondary" href="https://lilyzhng.github.io/posts/interaction-model/" target="_blank" rel="noopener">Read the write-up</a>
+        <a class="cta cta-secondary" href="https://www.youtube.com/watch?v=Yyoj5Trym5M" target="_blank" rel="noopener">Full demo</a>
+      </div>
+    </div>
+    <div class="intro-device reveal">
+      <canvas id="orb-canvas-2" width="800" height="800"></canvas>
     </div>
   </div>
 </section>
@@ -1212,6 +1405,147 @@ class SlidePresentation {
 }
 
 new SlidePresentation();
+</script>
+<script>
+(function() {
+  const NOISE = `
+    vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+    vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+    vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+    vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+    float snoise(vec3 v){
+      const vec2 C=vec2(1.0/6.0,1.0/3.0);
+      const vec4 D=vec4(0.0,0.5,1.0,2.0);
+      vec3 i=floor(v+dot(v,C.yyy));
+      vec3 x0=v-i+dot(i,C.xxx);
+      vec3 g=step(x0.yzx,x0.xyz);
+      vec3 l=1.0-g;
+      vec3 i1=min(g.xyz,l.zxy);
+      vec3 i2=max(g.xyz,l.zxy);
+      vec3 x1=x0-i1+C.xxx;
+      vec3 x2=x0-i2+C.yyy;
+      vec3 x3=x0-D.yyy;
+      i=mod289(i);
+      vec4 p=permute(permute(permute(
+        i.z+vec4(0.0,i1.z,i2.z,1.0))
+        +i.y+vec4(0.0,i1.y,i2.y,1.0))
+        +i.x+vec4(0.0,i1.x,i2.x,1.0));
+      float n_=0.142857142857;
+      vec3 ns=n_*D.wyz-D.xzx;
+      vec4 j=p-49.0*floor(p*ns.z*ns.z);
+      vec4 x_=floor(j*ns.z);
+      vec4 y_=floor(j-7.0*x_);
+      vec4 x=x_*ns.x+ns.yyyy;
+      vec4 y=y_*ns.x+ns.yyyy;
+      vec4 h=1.0-abs(x)-abs(y);
+      vec4 b0=vec4(x.xy,y.xy);
+      vec4 b1=vec4(x.zw,y.zw);
+      vec4 s0=floor(b0)*2.0+1.0;
+      vec4 s1=floor(b1)*2.0+1.0;
+      vec4 sh=-step(h,vec4(0.0));
+      vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;
+      vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+      vec3 p0=vec3(a0.xy,h.x);
+      vec3 p1=vec3(a0.zw,h.y);
+      vec3 p2=vec3(a1.xy,h.z);
+      vec3 p3=vec3(a1.zw,h.w);
+      vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+      p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+      vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0);
+      m=m*m;
+      return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+    }
+  `;
+
+  const vertShader = NOISE + `
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    void main() {
+      float n = snoise(position * 2.0 + uTime * 0.3) * 0.05;
+      vec3 pos = position + normal * n;
+      vNormal = normalize(normalMatrix * normal);
+      vPosition = (modelViewMatrix * vec4(pos, 1.0)).xyz;
+      gl_Position = projectionMatrix * vec4(vPosition, 1.0);
+    }
+  `;
+
+  const fragShader = `
+    uniform vec3 uColor;
+    uniform vec3 uRimColor;
+    uniform float uOpacity;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    void main() {
+      vec3 viewDir = normalize(-vPosition);
+      float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+      vec3 col = mix(uColor, uRimColor, fresnel * 0.7);
+      col += fresnel * uRimColor * 0.3;
+      float light = dot(vNormal, normalize(vec3(0.3, 0.7, 1.0))) * 0.5 + 0.5;
+      col *= 0.5 + light * 0.6;
+      float alpha = mix(uOpacity, min(uOpacity + 0.3, 1.0), fresnel);
+      gl_FragColor = vec4(col, alpha);
+    }
+  `;
+
+  const orbConfigs = [
+    { radius: 0.45, color: 0x3377ff, rimColor: 0xc8ff00, opacity: 0.55, orbitR: 0.75, orbitSpeed: 0.2, phase: 0.0 },
+    { radius: 0.35, color: 0x0055ff, rimColor: 0x88ddff, opacity: 0.45, orbitR: 0.85, orbitSpeed: 0.15, phase: 2.1 },
+    { radius: 0.3,  color: 0x5599ff, rimColor: 0xc8ff00, opacity: 0.4,  orbitR: 0.65, orbitSpeed: 0.25, phase: 4.2 },
+  ];
+
+  function initOrbs(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(560, 560, false);
+    renderer.setPixelRatio(2);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.z = 3.2;
+
+    const meshes = [];
+    orbConfigs.forEach((s) => {
+      const geo = new THREE.IcosahedronGeometry(s.radius, 32);
+      const mat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor: { value: new THREE.Color(s.color) },
+          uRimColor: { value: new THREE.Color(s.rimColor) },
+          uOpacity: { value: s.opacity },
+        },
+        vertexShader: vertShader,
+        fragmentShader: fragShader,
+        transparent: true,
+        depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh._orbit = s;
+      scene.add(mesh);
+      meshes.push(mesh);
+    });
+
+    function animate(t) {
+      const time = t * 0.001;
+      meshes.forEach((m) => {
+        m.material.uniforms.uTime.value = time;
+        const o = m._orbit;
+        const angle = time * o.orbitSpeed + o.phase;
+        const angle2 = time * o.orbitSpeed * 0.7 + o.phase * 1.3;
+        m.position.x = Math.sin(angle) * o.orbitR;
+        m.position.y = Math.cos(angle2) * o.orbitR * 0.6;
+        m.position.z = Math.sin(angle * 0.8 + 1.0) * o.orbitR * 0.3;
+        m.rotation.y = time * 0.15;
+      });
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  }
+
+  initOrbs('orb-canvas');
+  initOrbs('orb-canvas-2');
+})();
 </script>
 </body>
 </html>
