@@ -1,73 +1,65 @@
-# Walkie-Talkie to Agent Home
+# Walkie-Talkie
 
-Built during DeepMind I/O Hackathon, 2026-05-23.
+A real-time thinking partner orchestrating a dual model setup of `gpt-realtime-2` and Codex. It pairs a live voice interaction model with parallel background agents that handle tool calling, code execution, and generative UI, so the conversation never stops while work happens behind the scenes.
 
-## What it is
+## Why users need this
 
-A **dual-model voice agent**: press to talk, the front-end handles the conversation, the background does the work.
+Today, using an AI agent means watching it work. You prompt, you wait, you read, you prompt again. Voice doesn't fix this if it's still turn-based. What people actually want is to think out loud while things get done. Walkie-Talkie lets you talk through a problem, ask for a chart, pivot to a different question, request a code change, all in one continuous conversation, while each task runs in the background and results surface as they complete.
 
-1. **Front-end model** handles real-time voice interaction (listen, speak, pivot mid-conversation)
-2. **Background model** handles tool execution in a persistent sandbox (files, charts, generative UI)
+## The architecture
 
-LLM products today split into two camps: **full-duplex** (live voice) and **turn-based** (chat + tools). One is great at talking, the other is great at doing. Nothing sits in between.
-
-Walkie-Talkie stitches both: natural real-time voice up front, powerful tool execution in the back. Gemini 3.5 Flash as the background brain keeps latency low.
-
-## Architecture
+When Thinking Machines released their interaction model, I recognized the same architecture I'd been building independently. Their thesis: for interactivity to scale with intelligence, it must be part of the model itself. I don't fully agree. Model plus harness becomes a powerful, collaborative agent. These are two means to the same end. Interactivity is a type of user experience, and as long as users get that experience, it doesn't matter whether the system uses a full-duplex model or cascaded scaffolding. Walkie-Talkie proves this with OpenAI's realtime voice stack. `gpt-realtime-2` handles the hard interaction problems (sub-230ms responses, pause detection, mid-sentence pivots, simultaneous listening and speaking). Background agents handle the heavy work.
 
 ```
 Browser (hold-to-talk)
   | WebSocket /voice/browser
   v
-browser-stream.ts         <- voice model (real-time conversation)
+browser-stream.ts         <- gpt-realtime-2 (real-time voice conversation)
   | tool call: use_cli("make a chart of X")
   | POST http://localhost:3336/task
   v
-bg-brain.ts               <- Gemini 3.5 Flash (tool execution)
-  | generates files
+bg-brain.ts               <- Codex (parallel background agent execution)
+  | generates files, charts, artifacts
   v
-public/generated/         <- browser displays charts, memes, artifacts
+public/generated/         <- browser displays results as they complete
 ```
+
+## Parallel agents and context management
+
+The background is not a fixed set of tool functions. Each background agent is a coding agent with shell access in a persistent sandbox, the same pattern that makes CLI-based agents like Codex so powerful. Instead of predefining every tool (generate_chart, run_query, etc.), the agent gets intent from the voice model and figures out *how* autonomously. Multiple agents run simultaneously, each handling a different task. The front-end coordinator dispatches tasks, tracks which agents are working, and manages the context bridge between the voice conversation and each background agent. When an agent finishes (a chart, a file, a generative UI artifact), the result routes back to the voice model, which weaves it into the conversation naturally. This makes the system an agent orchestration layer with voice as the interface.
+
+## Why this is the correct architecture
+
+I wrote a [technical breakdown](https://lilyzhng.github.io/posts/interaction-model/) analyzing the five capabilities required for natural voice interaction: speaking during user speech, pause-vs-endpoint detection, real-time semantic processing, micro-responses, and simultaneous I/O. These are fundamentally at odds with heavy tool execution. Splitting them is not a shortcut. It's the right design.
+
+## Latency: the right metric
+
+Traditional voice agent pipelines (Decagon, Sierra) are sequential: STT -> LLM -> tool execution -> TTS. The user hears nothing until the entire chain completes.
+
+Walkie-Talkie separates voice from execution. `gpt-realtime-2` responds instantly while background agents work in parallel. The key metric is **time-to-first-voice-response**, not time-to-complete-execution. The user doesn't care when the tool finishes. They care when silence ends.
 
 ## Stack
 
 | Layer | Tech |
 |-------|------|
 | Voice UI | `public/index.html` (hold-to-talk button) |
-| Voice model (default) | OpenAI Realtime (`gpt-realtime-2`) — `VOICE_BACKEND=openai` |
-| Voice model (optional) | Gemini Live API — `VOICE_BACKEND=gemini-live` |
-| Background brain | Gemini 3.5 Flash API (port 3336) |
-| Server | Fastify + WebSocket (port 3335) |
+| Voice model | OpenAI Realtime API (`gpt-realtime-2`) |
+| Background agents | Codex (CLI/SDK, persistent sandbox) |
+| Server | Fastify + WebSocket |
 
 ## Prerequisites
 
 - Node.js 18+
-- `OPENAI_API_KEY` in `.env` (voice, default)
-- `GEMINI_API_KEY` in `.env` (background brain; also voice when `VOICE_BACKEND=gemini-live`)
+- `OPENAI_API_KEY` in `.env`
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env    # edit GEMINI_API_KEY; optional VOICE_BACKEND
-npm run verify-gemini-live   # smoke test Gemini Live voice
-npm run verify-gemini   # smoke test background Gemini API
-```
-
-Optional `.env` settings:
-
-```
-VOICE_BACKEND=openai  # openai (default) | gemini-live
-GEMINI_API_KEY=       # background brain; also voice when VOICE_BACKEND=gemini-live
-OPENAI_API_KEY=       # voice (default)
-PORT=3335                  # voice server port (default)
-BRAIN_BACKEND=gemini       # default
-BROWSER_AUTH_TOKEN=        # leave empty for local dev
+cp .env.example .env    # add OPENAI_API_KEY
 ```
 
 ## Launch
-
-Voice and tools are two separate processes. Both must be running.
 
 ```bash
 # Terminal 1: voice server
@@ -84,54 +76,21 @@ npm run dev
 1. Open http://localhost:3335 in Chrome
 2. Allow microphone access
 3. Hold the talk button and speak
-4. Simple chat uses voice only. Tasks like charts call the background brain.
-
-If the voice says "Background brain not running", start Terminal 2.
-
-## Scripts
-
-| Command | What |
-|---------|------|
-| `npm run dev` | Voice server (tsx, port 3335) |
-| `./launch-bg-brain.sh` | Background brain (port 3336) |
-| `npm run verify-gemini` | Smoke test Gemini 3.5 Flash (background) |
-| `npm run verify-gemini-live` | Smoke test Gemini Live (default voice) |
-| `npm run build` | Compile TypeScript |
-| `npm start` | Run compiled server |
-
-## Repo layout
-
-```
-src/
-  index.ts              entry point
-  server.ts             HTTP + WebSocket server
-  browser-stream.ts     real-time voice + tool routing
-  gemini-live-stream.ts Gemini Live voice backend (default)
-  bg-brain.ts           Gemini 3.5 Flash task server
-  config.ts             env config
-public/
-  index.html            voice UI
-  generated/            output artifacts (charts, memes)
-  icons/                UI assets
-scripts/
-  verify-gemini.ts      background API smoke test
-  verify-gemini-live.ts Gemini Live smoke test
-  test-gemini-image.ts  image generation test
-  test-tool-audio.ts    audio tool test
-```
+4. Simple chat uses voice only. Tasks like charts call the background agents.
 
 ## Deploy (Vercel)
 
-Static site from `public/` — how-it-works deck, diagrams, assets. Auto-deploys on push to `main` via [GitHub integration](https://github.com/lilyzhng/walkie-talkie).
+Static site from `public/`. Auto-deploys on push to `main` via [GitHub integration](https://github.com/lilyzhng/walkie-talkie).
 
 | URL | What |
 |-----|------|
-| https://lily-walkie-talkie.vercel.app | How it works (production home) |
-| https://lily-walkie-talkie.vercel.app/index.html | Voice demo UI (static only; needs local server for voice) |
+| https://lily-walkie-talkie.vercel.app | Production home |
 | https://vercel.com/lily-zhangs-projects/walkie-talkie | Vercel project dashboard |
 
-The voice WebSocket server and background brain still run locally (or on a long-lived host) — Vercel serves the static UI/docs only.
+The voice WebSocket server and background brain still run locally. Vercel serves the static UI only.
 
-## Future: Managed Agent (Antigravity)
+## Links
 
-The background brain could swap from direct Gemini API calls to an Antigravity managed agent (`BRAIN_BACKEND=antigravity`). This would give the agent a persistent remote sandbox with state across commands, turning the background into a true "Agent Home". The voice shell stays the same, only the execution backend changes.
+- **Research:** https://lilyzhng.github.io/posts/interaction-model/
+- **Demo:** https://lily-walkie-talkie.vercel.app/
+- **Using:** gpt-realtime-2 (OpenAI Realtime API), Codex (CLI/SDK)
