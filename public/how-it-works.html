@@ -786,7 +786,7 @@ h2 {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--font-body);
-  font-size: clamp(0.82rem, 1.2vw, 0.95rem);
+  font-size: clamp(0.68rem, 1vw, 0.8rem);
 }
 
 .benchmark-table th {
@@ -801,19 +801,9 @@ h2 {
   border-bottom: 2px solid var(--border);
 }
 
-.benchmark-table th:nth-child(3),
-.benchmark-table th:nth-child(4) {
-  text-align: right;
-}
-
 .benchmark-table td {
   padding: 12px 12px;
   color: var(--text-secondary);
-}
-
-.benchmark-table td:nth-child(3),
-.benchmark-table td:nth-child(4) {
-  text-align: right;
 }
 
 .benchmark-table tbody tr {
@@ -1393,43 +1383,67 @@ h2 {
 <section class="slide slide-compact-head slide-benchmark" data-title="Benchmark">
   <div class="slide-content">
     <div class="flow-header reveal">
-      <p class="eyebrow">Ablation study</p>
+      <p class="eyebrow">Comparison</p>
       <h2>TTFVR stay low latency. Regardless of complexity.</h2>
     </div>
     <div class="benchmark-card reveal">
       <table class="benchmark-table">
         <thead>
           <tr>
-            <th>Scenario</th>
-            <th>Complexity</th>
-            <th>TTFVR p50</th>
-            <th>Background p50</th>
+            <th></th>
+            <th>Traditional Cascaded</th>
+            <th>Voice-Only</th>
+            <th>Walkie-Talkie</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="scenario-name">Simple voice response</td>
-            <td><span class="complexity-tag none">none</span></td>
-            <td class="ttfvr">~230ms</td>
-            <td class="bg-latency">n/a</td>
+            <td class="scenario-name">Pipeline</td>
+            <td>STT → LLM → Tools → TTS</td>
+            <td>Single voice model</td>
+            <td>Voice + CLI agent in parallel</td>
           </tr>
           <tr>
-            <td class="scenario-name">Single tool call (music)</td>
-            <td><span class="complexity-tag">single-tool</span></td>
-            <td class="ttfvr">~240ms</td>
-            <td class="bg-latency">&lt;100ms</td>
+            <td class="scenario-name">TTFVR</td>
+            <td>~600-3000ms</td>
+            <td class="ttfvr">~200-300ms</td>
+            <td class="ttfvr">~200-300ms</td>
+          </tr>
+          <tr>
+            <td class="scenario-name">Tool calling</td>
+            <td>Predefined, blocks response</td>
+            <td>None</td>
+            <td>Full shell access, parallel</td>
+          </tr>
+          <tr>
+            <td class="scenario-name">Flexibility</td>
+            <td>Fixed tool schemas</td>
+            <td>Weak execution</td>
+            <td>General-purpose agent</td>
+          </tr>
+          <tr>
+            <td class="scenario-name">Simple voice response</td>
+            <td>~600ms+</td>
+            <td class="ttfvr">~230ms</td>
+            <td class="ttfvr">~230ms</td>
+          </tr>
+          <tr>
+            <td class="scenario-name">Music playback</td>
+            <td class="bg-latency">N/A</td>
+            <td class="bg-latency">N/A</td>
+            <td class="ttfvr">~240ms <span class="bg-latency">(bg &lt;100ms)</span></td>
           </tr>
           <tr>
             <td class="scenario-name">Chart generation</td>
-            <td><span class="complexity-tag">multi-step</span></td>
-            <td class="ttfvr">~235ms</td>
-            <td class="bg-latency">2.1s</td>
+            <td class="bg-latency">N/A</td>
+            <td class="bg-latency">N/A</td>
+            <td class="ttfvr">~235ms <span class="bg-latency">(bg 2.1s)</span></td>
           </tr>
           <tr>
             <td class="scenario-name">Meme generation</td>
-            <td><span class="complexity-tag">multi-step</span></td>
-            <td class="ttfvr">~228ms</td>
-            <td class="bg-latency">3.4s</td>
+            <td class="bg-latency">N/A</td>
+            <td class="bg-latency">N/A</td>
+            <td class="ttfvr">~228ms <span class="bg-latency">(bg 3.4s)</span></td>
           </tr>
         </tbody>
       </table>
