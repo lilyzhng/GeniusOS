@@ -1,14 +1,14 @@
-# Walkie-Talkie
+# GeniusOS
 
 A real-time thinking partner orchestrating a dual model setup of `gpt-realtime-2` and Codex. It pairs a live voice interaction model with parallel background agents that handle tool calling, code execution, and generative UI, so the conversation never stops while work happens behind the scenes.
 
 ## Why users need this
 
-Today, using an AI agent means watching it work. You prompt, you wait, you read, you prompt again. Voice doesn't fix this if it's still turn-based. What people actually want is to think out loud while things get done. Walkie-Talkie lets you talk through a problem, ask for a chart, pivot to a different question, request a code change, all in one continuous conversation, while each task runs in the background and results surface as they complete.
+Today, using an AI agent means watching it work. You prompt, you wait, you read, you prompt again. Voice doesn't fix this if it's still turn-based. What people actually want is to think out loud while things get done. GeniusOS lets you talk through a problem, ask for a chart, pivot to a different question, request a code change, all in one continuous conversation, while each task runs in the background and results surface as they complete.
 
 ## The architecture
 
-When Thinking Machines released their interaction model, I recognized the same architecture I'd been building independently. Their thesis: for interactivity to scale with intelligence, it must be part of the model itself. I don't fully agree. Model plus harness becomes a powerful, collaborative agent. These are two means to the same end. Interactivity is a type of user experience, and as long as users get that experience, it doesn't matter whether the system uses a full-duplex model or cascaded scaffolding. Walkie-Talkie proves this with OpenAI's realtime voice stack. `gpt-realtime-2` handles the hard interaction problems (sub-230ms responses, pause detection, mid-sentence pivots, simultaneous listening and speaking). Background agents handle the heavy work.
+When Thinking Machines released their interaction model, I recognized the same architecture I'd been building independently. Their thesis: for interactivity to scale with intelligence, it must be part of the model itself. I don't fully agree. Model plus harness becomes a powerful, collaborative agent. These are two means to the same end. Interactivity is a type of user experience, and as long as users get that experience, it doesn't matter whether the system uses a full-duplex model or cascaded scaffolding. GeniusOS proves this with OpenAI's realtime voice stack. `gpt-realtime-2` handles the hard interaction problems (sub-230ms responses, pause detection, mid-sentence pivots, simultaneous listening and speaking). Background agents handle the heavy work.
 
 ```
 Browser (hold-to-talk)
@@ -36,7 +36,7 @@ I wrote a [technical breakdown](https://lilyzhng.github.io/posts/interaction-mod
 
 Traditional voice agent pipelines (Decagon, Sierra) are sequential: STT -> LLM -> tool execution -> TTS. The user hears nothing until the entire chain completes.
 
-Walkie-Talkie separates voice from execution. `gpt-realtime-2` responds instantly while background agents work in parallel. The key metric is **time-to-first-voice-response**, not time-to-complete-execution. The user doesn't care when the tool finishes. They care when silence ends.
+GeniusOS separates voice from execution. `gpt-realtime-2` responds instantly while background agents work in parallel. The key metric is **time-to-first-voice-response**, not time-to-complete-execution. The user doesn't care when the tool finishes. They care when silence ends.
 
 ## Stack
 
