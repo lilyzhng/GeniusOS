@@ -1,13 +1,7 @@
-### Any product feedback for the OpenAI team?
-The Realtime API is incredibly powerful for building interactive voice experiences. A few suggestions:
 
-1. Latency optimization guide. We've invested time in reducing time-to-first-voice-response. A best practices document on latency tuning would help streamline development, covering optimal VAD settings, when to use server vs. client-side turn detection, and structuring function calls to avoid blocking the voice stream.
-
-2. Native parallel tool execution. Currently, to have the voice model call a tool without pausing, you need to create your own orchestration layer, as seen with Walkie-Talkie. First-class support for non-blocking tool calls in the Realtime API, allowing the model to continue speaking while tools run, would be transformative.
-
-3. Codex as a tool backend. We use Codex agents as versatile tool executors instead of relying on predefined functions. This approach is effective but requires manual context bridging between the voice session and Codex sandbox. Improved integration between the Realtime API and Codex, such as shared context and direct dispatch, would simplify building this architecture.
 
 ### Demo Video
+
 ### Project Description
 
 **Walkie-Talkie** is a real-time thinking partner orchestrating a dual model setup of `gpt-realtime-2` and Codex. It pairs a live voice interaction model with parallel background agents that handle tool calling, code execution, and generative UI, so the conversation never stops while work happens behind the scenes.
@@ -34,3 +28,20 @@ I analyzed the five capabilities needed for natural voice interaction: speaking 
 - **Research:** https://lilyzhng.github.io/posts/interaction-model/
 - **Demo:** https://lily-walkie-talkie.vercel.app/
 - **GitHub:** https://github.com/lilyzhng/walkie-talkie
+
+
+## Which OpenAI products and models did you use to build this project?
+
+There are front-end interaction and background brain. gpt-realtime-2 handles the front-end voice interaction: responses, pause detection, mid-sentence pivots, simultaneous listening and speaking. 
+
+Codex powers the background agents. We initially tried defining specific tool functions (weather lookup, refund check, etc.), but it breaks down quickly. Users ask unpredictable questions, and predefining every possible tool isn't scalable. Instead, each background agent is a full Codex coding agent in a persistent sandbox. It gets intent from the voice model and figures out HOW autonomously. Multiple agents run in parallel, handling tool calls, search, retrieval, and generative UI. When one finishes, the result flows back to gpt-realtime-2, which weaves it into the conversation naturally.
+
+
+### Any product feedback for the OpenAI team?
+The Realtime API is incredibly powerful for building interactive voice experiences. A few suggestions:
+
+1. Latency optimization guide. We've invested time in reducing time-to-first-voice-response. A best practices document on latency tuning would help streamline development, covering optimal VAD settings, when to use server vs. client-side turn detection, and structuring function calls to avoid blocking the voice stream.
+
+2. Native parallel tool execution. Currently, to have the voice model call a tool without pausing, you need to create your own orchestration layer, as seen with Walkie-Talkie. First-class support for non-blocking tool calls in the Realtime API, allowing the model to continue speaking while tools run, would be transformative.
+
+3. Codex as a tool backend. We use Codex agents as versatile tool executors instead of relying on predefined functions. This approach is effective but requires manual context bridging between the voice session and Codex sandbox. Improved integration between the Realtime API and Codex, such as shared context and direct dispatch, would simplify building this architecture.
