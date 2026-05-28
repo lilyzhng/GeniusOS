@@ -27,7 +27,7 @@ Speaking style:
 - Wait for Lily to speak first. Don't fill silence. If she pauses or hasn't said anything meaningful yet, stay quiet.
 - Lily toggles the radio on and off with the PTT button. When off, she cannot hear you.
 
-You have a background brain (Gemini 3.5 Flash) for charts and data tasks. Agent Home is the workspace beside the walkie-talkie — windows pop up automatically when needed.
+You have a background brain for charts and data tasks. Agent Home is the workspace beside the walkie-talkie — windows pop up automatically when needed.
 
 - use_cli — charts and data (opens a chart window when ready)
 - make_meme — visual HTML memes with SVG illustrations (opens meme window on CH-04)
@@ -183,6 +183,9 @@ interface BrowserSession {
   pendingMemeRequest: boolean;
   memeInFlight: Promise<string> | null;
   volumeLevel: number;
+  speechStoppedAt: number;
+  ttfvrSent: boolean;
+  lastToolDispatchAt: number;
 }
 
 export function handleBrowserStream(browserWs: WebSocket): void {
@@ -204,6 +207,9 @@ export function handleBrowserStream(browserWs: WebSocket): void {
     pendingMemeRequest: false,
     memeInFlight: null,
     volumeLevel: 1,
+    speechStoppedAt: 0,
+    ttfvrSent: false,
+    lastToolDispatchAt: 0,
   };
 
   browserWs.on("message", (data) => {
@@ -366,10 +372,14 @@ function processToolCall(
   console.log(`[voice] Tool: ${name}(${JSON.stringify(args)})`);
   send(session, { type: "tool_call", name, args });
   send(session, { type: "status", state: "thinking" });
+  const toolStart = Date.now();
+  session.lastToolDispatchAt = toolStart;
 
   executeTool(name, args, session).then((result) => {
-    console.log(`[voice] Tool result: ${result.slice(0, 200)}`);
+    const bgLatency = Date.now() - toolStart;
+    console.log(`[voice] Tool result (${bgLatency}ms): ${result.slice(0, 200)}`);
     send(session, { type: "tool_result", name, result });
+    send(session, { type: "latency", bgLatency, tool: name });
 
     if (session.voiceBackend === "openai" && session.openaiWs?.readyState !== WebSocket.OPEN) {
       console.error("[openai] WebSocket closed before tool result could be sent back");
@@ -411,10 +421,20 @@ async function connectGeminiLive(session: BrowserSession, context: string | null
           if (!session.isSpeaking) {
             session.isSpeaking = true;
             send(session, { type: "status", state: "speaking" });
+            if (session.speechStoppedAt > 0 && !session.ttfvrSent) {
+              const ttfvr = Date.now() - session.speechStoppedAt;
+              session.ttfvrSent = true;
+              console.log(`[gemini-live] TTFVR: ${ttfvr}ms`);
+              send(session, { type: "latency", ttfvr });
+            }
           }
           send(session, { type: "audio", data: base64 });
         },
-        onInputTranscript: (text) => handleUserTranscript(session, text),
+        onInputTranscript: (text) => {
+          session.speechStoppedAt = Date.now();
+          session.ttfvrSent = false;
+          handleUserTranscript(session, text);
+        },
         onOutputTranscriptPartial: (text) => handleAssistantTranscript(session, text, { partial: true }),
         onOutputTranscript: (text) => {
           session.isSpeaking = false;
@@ -569,12 +589,24 @@ function handleOpenAIEvent(
       console.log("[openai] Speech started");
       break;
 
+    case "input_audio_buffer.speech_stopped":
+      session.speechStoppedAt = Date.now();
+      session.ttfvrSent = false;
+      console.log("[openai] Speech stopped (T0)");
+      break;
+
     case "response.audio.delta":
     case "response.output_audio.delta":
       if (!session.isSpeaking) {
         session.isSpeaking = true;
         console.log("[openai] >> Speaking status sent");
         send(session, { type: "status", state: "speaking" });
+        if (session.speechStoppedAt > 0 && !session.ttfvrSent) {
+          const ttfvr = Date.now() - session.speechStoppedAt;
+          session.ttfvrSent = true;
+          console.log(`[openai] TTFVR: ${ttfvr}ms`);
+          send(session, { type: "latency", ttfvr });
+        }
       }
       send(session, { type: "audio", data: (event.delta as string) ?? "" });
       break;
@@ -623,7 +655,7 @@ function handleOpenAIEvent(
       const t = event.type as string;
       if (t && (t.includes("audio") && !t.includes("transcript"))) {
         console.log(`[openai] AUDIO event: ${t}`);
-      } else if (t && !t.startsWith("response.audio.") && !t.startsWith("response.output_audio.") && t !== "input_audio_buffer.committed" && t !== "input_audio_buffer.speech_stopped" && t !== "response.created" && t !== "response.done" && t !== "conversation.item.created" && t !== "rate_limits.updated" && t !== "output_audio_buffer.started" && t !== "output_audio_buffer.stopped" && t !== "output_audio_buffer.cleared") {
+      } else if (t && !t.startsWith("response.audio.") && !t.startsWith("response.output_audio.") && t !== "input_audio_buffer.committed" && t !== "response.created" && t !== "response.done" && t !== "conversation.item.created" && t !== "rate_limits.updated" && t !== "output_audio_buffer.started" && t !== "output_audio_buffer.stopped" && t !== "output_audio_buffer.cleared") {
         console.log(`[openai] Unhandled event: ${t}`);
       }
       break;

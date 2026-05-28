@@ -12,7 +12,8 @@ const DATA_DIR = resolve(__dirname, "../data");
 const GENERATED_DIR = resolve(__dirname, "../public/generated");
 const PORT = 3336;
 const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.5-flash";
-const BACKEND = (process.env.BRAIN_BACKEND ?? "gemini") as "gemini" | "antigravity";
+const OPENAI_MODEL = process.env.OPENAI_BRAIN_MODEL ?? "gpt-4.1";
+const BACKEND = (process.env.BRAIN_BACKEND ?? "gemini") as "gemini" | "codex" | "antigravity";
 
 mkdirSync(GENERATED_DIR, { recursive: true });
 
@@ -232,11 +233,94 @@ async function runTaskGemini(task: string, kind: TaskKind = "text"): Promise<str
   return result;
 }
 
+async function runTaskCodex(task: string, kind: TaskKind = "text"): Promise<string> {
+  lastSaved = { viz: null, meme: null };
+  const resolvedKind = resolveTaskKind(task, kind);
+  console.log(`[bg-brain] Task (${OPENAI_MODEL}, ${resolvedKind}): ${task.slice(0, 100)}`);
+  const start = Date.now();
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
+
+  let systemPrompt = SYSTEM_PROMPT;
+  let userContent = task;
+
+  if (resolvedKind === "chart") {
+    const planResp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        messages: [
+          { role: "system", content: PLAN_PROMPT },
+          { role: "user", content: task },
+        ],
+      }),
+    });
+    const planJson = await planResp.json() as { choices?: { message?: { content?: string } }[] };
+    const plan = (planJson.choices?.[0]?.message?.content ?? "").trim();
+    console.log(`[bg-brain] Viz plan: ${plan.slice(0, 200)}`);
+    userContent = `User request: ${task}\n\nVisualization plan (follow this):\n${plan}\n\nNow output the HTML.`;
+    systemPrompt = VIZ_PROMPT;
+  } else if (resolvedKind === "meme") {
+    systemPrompt = MEME_PROMPT;
+  }
+
+  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+    }),
+  });
+  const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
+  let text = (json.choices?.[0]?.message?.content ?? "").trim();
+  const elapsed = Date.now() - start;
+
+  const savedPrefix = resolvedKind === "chart" ? "viz" : resolvedKind === "meme" ? "meme" : null;
+  let saved = savedPrefix ? saveHtmlFromResponse(text, savedPrefix) : null;
+
+  if (resolvedKind === "meme" && saved) {
+    const htmlPath = resolve(GENERATED_DIR, saved);
+    const htmlContent = readFileSync(htmlPath, "utf-8");
+    if (!isVisualMemeHtml(htmlContent)) {
+      console.log("[bg-brain] Meme was text-only — retrying with visual requirement");
+      const retryResp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          messages: [
+            { role: "system", content: MEME_PROMPT },
+            { role: "user", content: `${task}\n\nYour previous output was TEXT-ONLY — INVALID. Regenerate with a large inline SVG scene (character + props, ≥280px tall). Caption text is optional and secondary.` },
+          ],
+        }),
+      });
+      const retryJson = await retryResp.json() as { choices?: { message?: { content?: string } }[] };
+      text = (retryJson.choices?.[0]?.message?.content ?? "").trim();
+      saved = saveHtmlFromResponse(text, "meme");
+    }
+  }
+
+  const summary = saved
+    ? text.replace(/```(?:html)?\s*\n[\s\S]*?```/i, `[${resolvedKind === "meme" ? "Meme" : "Chart"} saved as ${saved}]`).trim()
+    : text;
+
+  const result = (summary || "No output.").slice(0, 4000);
+  console.log(`[bg-brain] Done (${elapsed}ms): ${result.slice(0, 200)}`);
+  return result;
+}
+
 async function runTaskAntigravity(_task: string): Promise<string> {
-  throw new Error("Antigravity backend not wired yet — set BRAIN_BACKEND=gemini for local dev");
+  throw new Error("Antigravity backend not wired yet — set BRAIN_BACKEND=gemini or BRAIN_BACKEND=codex");
 }
 
 async function runTask(task: string, kind: TaskKind = "text"): Promise<string> {
+  if (BACKEND === "codex") return runTaskCodex(task, kind);
   if (BACKEND === "antigravity") return runTaskAntigravity(task);
   return runTaskGemini(task, kind);
 }
@@ -278,7 +362,7 @@ const server = createServer(async (req, res) => {
     });
   } else if (req.method === "GET" && req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: seeded ? "ready" : "seeding", busy, queue: taskQueue.length, backend: BACKEND, model: MODEL }));
+    res.end(JSON.stringify({ status: seeded ? "ready" : "seeding", busy, queue: taskQueue.length, backend: BACKEND, model: BACKEND === "codex" ? OPENAI_MODEL : MODEL }));
   } else {
     res.writeHead(404);
     res.end("Not found");

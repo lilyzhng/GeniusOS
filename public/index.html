@@ -499,6 +499,26 @@ body {
 
 .status-text.ready { color: var(--status-active); }
 
+.latency-overlay {
+  position: absolute;
+  bottom: 6px;
+  left: 14px;
+  right: 14px;
+  font-family: 'Chakra Petch', monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--label-color);
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.latency-overlay.visible { opacity: 1; }
+.latency-overlay .lat-ttfvr { color: var(--role-assistant); }
+.latency-overlay .lat-bg { color: var(--tool-accent); }
+
 .side-btn {
   position: absolute;
   background: var(--side-btn-bg);
@@ -1062,6 +1082,10 @@ body {
       <span class="freq">24 kHz PCM<a href="/how-it-works" title="How it works" style="margin-left:8px;color:inherit;opacity:0.55;text-decoration:none;font-size:10px;">?</a><span class="theme-icon" id="theme-icon">&#9728;</span><span class="mute-icon" id="mute-icon" title="Mic muted"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10a2.2 2.2 0 0 0 2.2-2.2V3.7a2.2 2.2 0 0 0-4.4 0v4.1A2.2 2.2 0 0 0 8 10zm3.8-2.2a3.8 3.8 0 0 1-7.6 0H3a5 5 0 0 0 4.2 4.94V14H5.5v1h5v-1H8.8v-1.26A5 5 0 0 0 13 7.8h-1.2z" fill="currentColor"/><line x1="2.5" y1="2.5" x2="13.5" y2="13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span></span>
     </div>
     <div id="transcript"></div>
+    <div class="latency-overlay" id="latency-overlay">
+      <span class="lat-ttfvr" id="lat-ttfvr"></span>
+      <span class="lat-bg" id="lat-bg"></span>
+    </div>
     <div class="tool-divider" id="tool-divider">
       <span class="divider-label">Calling Tools</span>
     </div>
@@ -1790,6 +1814,9 @@ function connect() {
       case 'volume':
         setPlaybackVolume(msg.change, msg.level, msg.volumeLevel);
         break;
+      case 'latency':
+        showLatency(msg);
+        break;
       case 'status':
         if (msg.state === 'listening' || msg.state === 'ready') {
           if (audioCtx && nextPlayTime > audioCtx.currentTime + 0.1) {
@@ -2076,6 +2103,22 @@ function showVideoWindow(msg, mode = currentChannel().mode) {
     `<video controls autoplay playsinline style="width:100%;max-height:70vh;display:block" src="${escapeHtml(url)}"></video>` +
     `</div>`;
   setChannelWindow(mode, title, html);
+}
+
+let latencyFadeTimer = null;
+function showLatency(msg) {
+  const overlay = document.getElementById('latency-overlay');
+  const ttfvrEl = document.getElementById('lat-ttfvr');
+  const bgEl = document.getElementById('lat-bg');
+  if (msg.ttfvr != null) {
+    ttfvrEl.textContent = `TTFVR: ${msg.ttfvr}ms`;
+  }
+  if (msg.bgLatency != null) {
+    bgEl.textContent = `BG: ${(msg.bgLatency / 1000).toFixed(1)}s (parallel)`;
+  }
+  overlay.classList.add('visible');
+  clearTimeout(latencyFadeTimer);
+  latencyFadeTimer = setTimeout(() => overlay.classList.remove('visible'), 8000);
 }
 
 function escapeHtml(str) {
