@@ -20,7 +20,7 @@ export const config = {
     model: process.env.GEMINI_MODEL ?? "gemini-3.5-flash",
   },
   brain: {
-    backend: (process.env.BRAIN_BACKEND ?? "gemini") as "gemini" | "antigravity",
+    backend: (process.env.BRAIN_BACKEND ?? "gemini") as "gemini" | "codex" | "antigravity",
   },
   server: {
     port: parseInt(process.env.PORT ?? "3335", 10),
