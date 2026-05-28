@@ -1,7 +1,8 @@
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
 import { GoogleGenAI } from "@google/genai";
 import { config as loadEnv } from "dotenv";
 
@@ -233,84 +234,92 @@ async function runTaskGemini(task: string, kind: TaskKind = "text"): Promise<str
   return result;
 }
 
+function codexExec(prompt: string, model: string): Promise<string> {
+  const outputFile = `/tmp/codex-output-${Date.now()}.txt`;
+  const projectRoot = resolve(__dirname, "..");
+
+  return new Promise((res, rej) => {
+    const child = spawn("codex", [
+      "exec",
+      "-m", model,
+      "-C", projectRoot,
+      "-s", "workspace-write",
+      "-o", outputFile,
+      "--ephemeral",
+      "--skip-git-repo-check",
+      "--ignore-rules",
+      "--ignore-user-config",
+      "-",
+    ], {
+      env: process.env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    let stderr = "";
+    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+
+    child.stdin.write(prompt);
+    child.stdin.end();
+
+    const timer = setTimeout(() => {
+      child.kill();
+      rej(new Error("codex exec timed out after 120s"));
+    }, 120_000);
+
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        rej(new Error(`codex exec exited ${code}: ${stderr.slice(0, 500)}`));
+        return;
+      }
+      try {
+        res(readFileSync(outputFile, "utf-8").trim());
+      } catch {
+        rej(new Error(`No output from codex exec`));
+      }
+    });
+
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      rej(err);
+    });
+  });
+}
+
 async function runTaskCodex(task: string, kind: TaskKind = "text"): Promise<string> {
   lastSaved = { viz: null, meme: null };
   const resolvedKind = resolveTaskKind(task, kind);
-  console.log(`[bg-brain] Task (${OPENAI_MODEL}, ${resolvedKind}): ${task.slice(0, 100)}`);
+  console.log(`[bg-brain] Task (codex ${OPENAI_MODEL}, ${resolvedKind}): ${task.slice(0, 100)}`);
   const start = Date.now();
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
+  const prefix = resolvedKind === "chart" ? "viz" : resolvedKind === "meme" ? "meme" : null;
+  const filename = prefix ? `${prefix}-${Date.now()}.html` : null;
+  const relPath = filename ? `public/generated/${filename}` : null;
 
-  let systemPrompt = SYSTEM_PROMPT;
-  let userContent = task;
-
+  let prompt: string;
   if (resolvedKind === "chart") {
-    const planResp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: "system", content: PLAN_PROMPT },
-          { role: "user", content: task },
-        ],
-      }),
-    });
-    const planJson = await planResp.json() as { choices?: { message?: { content?: string } }[] };
-    const plan = (planJson.choices?.[0]?.message?.content ?? "").trim();
-    console.log(`[bg-brain] Viz plan: ${plan.slice(0, 200)}`);
-    userContent = `User request: ${task}\n\nVisualization plan (follow this):\n${plan}\n\nNow output the HTML.`;
-    systemPrompt = VIZ_PROMPT;
+    prompt = `${VIZ_PROMPT}\n\nUser request: ${task}\n\nFirst plan the visualization, then generate the HTML and write it to ${relPath}. Reply with a brief spoken summary of the chart.`;
   } else if (resolvedKind === "meme") {
-    systemPrompt = MEME_PROMPT;
+    prompt = `${MEME_PROMPT}\n\nUser request: ${task}\n\nGenerate the meme HTML and write it to ${relPath}. Reply with a one-line description.`;
+  } else {
+    prompt = `${SYSTEM_PROMPT}\n\n${task}`;
   }
 
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-    }),
-  });
-  const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
-  let text = (json.choices?.[0]?.message?.content ?? "").trim();
+  const text = await codexExec(prompt, OPENAI_MODEL);
   const elapsed = Date.now() - start;
 
-  const savedPrefix = resolvedKind === "chart" ? "viz" : resolvedKind === "meme" ? "meme" : null;
-  let saved = savedPrefix ? saveHtmlFromResponse(text, savedPrefix) : null;
-
-  if (resolvedKind === "meme" && saved) {
-    const htmlPath = resolve(GENERATED_DIR, saved);
-    const htmlContent = readFileSync(htmlPath, "utf-8");
-    if (!isVisualMemeHtml(htmlContent)) {
-      console.log("[bg-brain] Meme was text-only — retrying with visual requirement");
-      const retryResp = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: OPENAI_MODEL,
-          messages: [
-            { role: "system", content: MEME_PROMPT },
-            { role: "user", content: `${task}\n\nYour previous output was TEXT-ONLY — INVALID. Regenerate with a large inline SVG scene (character + props, ≥280px tall). Caption text is optional and secondary.` },
-          ],
-        }),
-      });
-      const retryJson = await retryResp.json() as { choices?: { message?: { content?: string } }[] };
-      text = (retryJson.choices?.[0]?.message?.content ?? "").trim();
-      saved = saveHtmlFromResponse(text, "meme");
+  if (prefix && filename && relPath) {
+    const fullPath = resolve(__dirname, "..", relPath);
+    if (existsSync(fullPath)) {
+      console.log(`[bg-brain] Codex wrote ${filename}`);
+      lastSaved[prefix] = filename;
+    } else {
+      const saved = saveHtmlFromResponse(text, prefix);
+      if (saved) console.log(`[bg-brain] Parsed HTML from response as ${saved}`);
     }
   }
 
-  const summary = saved
-    ? text.replace(/```(?:html)?\s*\n[\s\S]*?```/i, `[${resolvedKind === "meme" ? "Meme" : "Chart"} saved as ${saved}]`).trim()
-    : text;
-
-  const result = (summary || "No output.").slice(0, 4000);
+  const result = (text || "No output.").slice(0, 4000);
   console.log(`[bg-brain] Done (${elapsed}ms): ${result.slice(0, 200)}`);
   return result;
 }
