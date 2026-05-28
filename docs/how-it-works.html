@@ -767,6 +767,12 @@ h2 {
   padding-top: clamp(8px, 2vh, 16px);
 }
 
+.slide-benchmark .benchmark-card {
+  margin-top: clamp(48px, 10vh, 100px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .benchmark-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -779,18 +785,19 @@ h2 {
 .benchmark-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: var(--font-mono);
-  font-size: clamp(0.72rem, 1.1vw, 0.88rem);
+  font-family: var(--font-body);
+  font-size: clamp(0.82rem, 1.2vw, 0.95rem);
 }
 
 .benchmark-table th {
   text-align: left;
   padding: 8px 12px;
+  font-family: var(--font-mono);
   font-weight: 600;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-size: 0.8em;
+  font-size: 0.75em;
   border-bottom: 2px solid var(--border);
 }
 
@@ -819,16 +826,16 @@ h2 {
 
 .benchmark-table .ttfvr {
   color: var(--green);
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 1.05em;
 }
 
 .benchmark-table .bg-latency {
   color: var(--text-dim);
+  font-family: var(--font-mono);
 }
 
 .benchmark-table .scenario-name {
-  font-family: var(--font-body);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -853,6 +860,8 @@ h2 {
   color: var(--text-secondary);
   text-align: left;
   max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
   line-height: 1.6;
 }
 
